@@ -1,37 +1,20 @@
-import 'package:hive/hive.dart';
+// lib/models/app_user.dart
 
-part 'app_user.g.dart';
-
-@HiveType(typeId: 1)
-class AppUser extends HiveObject {
-  @HiveField(0)
-  String username;
-
-  @HiveField(1)
-  String password;
-
-  @HiveField(2)
-  bool podiumEnabled;
-
-  @HiveField(3)
-  bool waiterEnabled;
-
-  @HiveField(4)
-  bool customerEnabled;
-
-  // ✅ New Feature Toggles
-  @HiveField(5)
-  bool banquetBookingEnabled;
-
-  @HiveField(6)
-  bool banquetReportsEnabled;
-
-  @HiveField(7)
-  bool queueReportsEnabled;
+class AppUser {
+  final String username;
+  final String email;
+  final String branchId;
+  final bool podiumEnabled;
+  final bool waiterEnabled;
+  final bool customerEnabled;
+  final bool banquetBookingEnabled;
+  final bool banquetReportsEnabled;
+  final bool queueReportsEnabled;
 
   AppUser({
     required this.username,
-    required this.password,
+    required this.email,
+    required this.branchId,
     this.podiumEnabled = false,
     this.waiterEnabled = false,
     this.customerEnabled = false,
@@ -40,5 +23,33 @@ class AppUser extends HiveObject {
     this.queueReportsEnabled = false,
   });
 
-  bool get isAdmin => username == 'admin';
+  bool get isAdmin => username.toLowerCase() == 'admin';
+
+  Map<String, dynamic> toMap() {
+    return {
+      'username': username,
+      'email': email,
+      'branchId': branchId,
+      'podiumEnabled': podiumEnabled,
+      'waiterEnabled': waiterEnabled,
+      'customerEnabled': customerEnabled,
+      'banquetBookingEnabled': banquetBookingEnabled,
+      'banquetReportsEnabled': banquetReportsEnabled,
+      'queueReportsEnabled': queueReportsEnabled,
+    };
+  }
+
+  factory AppUser.fromMap(Map<String, dynamic> map) {
+    return AppUser(
+      username: map['username'] ?? '',
+      email: map['email'] ?? '',
+      branchId: map['branchId'] ?? 'all',
+      podiumEnabled: map['podiumEnabled'] ?? false,
+      waiterEnabled: map['waiterEnabled'] ?? false,
+      customerEnabled: map['customerEnabled'] ?? false,
+      banquetBookingEnabled: map['banquetBookingEnabled'] ?? false,
+      banquetReportsEnabled: map['banquetReportsEnabled'] ?? false,
+      queueReportsEnabled: map['queueReportsEnabled'] ?? false,
+    );
+  }
 }

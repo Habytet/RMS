@@ -38,10 +38,11 @@ class DashboardScreen extends StatelessWidget {
             _moduleCard(context, 'Banquet', Icons.apartment, () {
               _openBanquetModule(context, user);
             }),
-            _moduleCard(context, 'Reports', Icons.bar_chart, () {
-              _openReportsModule(context, user);
-            }),
-            _moduleCard(context, 'Admin', Icons.admin_panel_settings, () {
+            if (user.queueReportsEnabled || user.banquetReportsEnabled || user.isAdmin)
+              _moduleCard(context, 'Reports', Icons.bar_chart, () {
+                _openReportsModule(context, user);
+              }),
+            if (user.isAdmin) _moduleCard(context, 'Admin', Icons.admin_panel_settings, () {
               _openAdminModule(context, user);
             }),
           ],
@@ -86,11 +87,9 @@ class DashboardScreen extends StatelessWidget {
     if (user.banquetBookingEnabled || user.isAdmin) {
       items.add({'title': 'Banquet Booking', 'route': '/banquet'});
     }
-    if (user.banquetReportsEnabled || user.isAdmin) {
-      items.add({'title': 'View Bookings', 'route': '/banquet/bookings'}); // Renamed from "Banquet Reports"
-    }
     if (user.isAdmin) {
       items.add({'title': 'Banquet Setup', 'route': '/banquet/setup'});
+      items.add({'title': 'View Bookings', 'route': '/banquet/bookings'});
     }
 
     _openSubMenu(context, 'Banquet Module', items);
@@ -100,13 +99,12 @@ class DashboardScreen extends StatelessWidget {
     final items = <Map<String, String>>[];
 
     if (user.queueReportsEnabled || user.isAdmin) {
-      items.add({'title': 'Queue Reports', 'route': '/reports/queue'});
+      items.add({'title': 'Queue Reports', 'route': '/admin/queue_reports'});
     }
     if (user.banquetReportsEnabled || user.isAdmin) {
-      items.add({'title': 'Banquet Reports', 'route': '/reports/banquet'});
     }
     if (user.isAdmin) {
-      items.add({'title': 'Customer Reports', 'route': '/reports/customers'});
+      items.add({'title': 'Legacy Reports', 'route': '/admin/reports'});
     }
 
     _openSubMenu(context, 'Reports', items);

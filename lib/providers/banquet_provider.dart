@@ -1,82 +1,95 @@
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/hall.dart';
 import '../models/slot.dart';
 import '../models/banquet_booking.dart';
 
 class BanquetProvider extends ChangeNotifier {
-  final _hallBox = Hive.box<Hall>('halls');
-  final _slotBox = Hive.box<Slot>('slots');
-  final _bookingBox = Hive.box<BanquetBooking>('banquetBookings');
+  final _hallCol = FirebaseFirestore.instance.collection('halls');
+  final _slotCol = FirebaseFirestore.instance.collection('slots');
+  final _bookingCol = FirebaseFirestore.instance.collection('banquetBookings');
 
-  List<Hall> get halls => _hallBox.values.toList();
-  List<Slot> get slots => _slotBox.values.toList();
-  List<BanquetBooking> get bookings => _bookingBox.values.toList();
+  List<Hall> halls = [];
+  List<Slot> slots = [];
+  List<BanquetBooking> bookings = [];
 
-  void addHall(String name) {
-    final hall = Hall(name: name);
-    _hallBox.put(name, hall);
-    notifyListeners();
+  BanquetProvider() {
+    _init();
   }
 
-  void removeHall(String name) {
-    _hallBox.delete(name);
-    final relatedSlots = _slotBox.values
-        .where((slot) => slot.hallName == name)
-        .toList();
-    for (final slot in relatedSlots) {
-      _slotBox.delete(slot.key);
-    }
-    notifyListeners();
-  }
-
-  void addSlot(String hallName, String label) {
-    final slot = Slot(hallName: hallName, label: label);
-    _slotBox.add(slot);
-    notifyListeners();
-  }
-
-  void removeSlot(String hallName, String label) {
-    final target = _slotBox.values.cast<Slot?>().firstWhere(
-          (s) => s!.hallName == hallName && s.label == label,
-      orElse: () => null,
-    );
-    if (target != null) {
-      _slotBox.delete(target.key);
+  void _init() {
+    _hallCol.snapshots().listen((snapshot) {
+      halls = snapshot.docs.map((doc) => Hall.fromMap(doc.data())).toList();
       notifyListeners();
+    });
+
+    _slotCol.snapshots().listen((snapshot) {
+      slots = snapshot.docs.map((doc) => Slot.fromMap(doc.data())).toList();
+      notifyListeners();
+    });
+
+    _bookingCol.snapshots().listen((snapshot) {
+      bookings = snapshot.docs.map((doc) => BanquetBooking.fromMap(doc.data())).toList();
+      notifyListeners();
+    });
+  }
+
+  Future<void> addHall(String name) async {
+    final hall = Hall(name: name);
+    await _hallCol.doc(name).set(hall.toMap());
+  }
+
+  Future<void> removeHall(String name) async {
+    await _hallCol.doc(name).delete();
+    final relatedSlots = await _slotCol.where('hallName', isEqualTo: name).get();
+    for (var doc in relatedSlots.docs) {
+      await _slotCol.doc(doc.id).delete();
+    }
+  }
+
+  Future<void> addSlot(String hallName, String label) async {
+    final slot = Slot(hallName: hallName, label: label);
+    await _slotCol.add(slot.toMap());
+  }
+
+  Future<void> removeSlot(String hallName, String label) async {
+    final query = await _slotCol
+        .where('hallName', isEqualTo: hallName)
+        .where('label', isEqualTo: label)
+        .get();
+    for (var doc in query.docs) {
+      await _slotCol.doc(doc.id).delete();
     }
   }
 
   List<Slot> getSlotsForHall(String hallName) {
-    return _slotBox.values.where((s) => s.hallName == hallName).toList();
+    return slots.where((s) => s.hallName == hallName).toList();
   }
 
   List<BanquetBooking> getBookingsForDate(DateTime date) {
     final dayOnly = DateTime(date.year, date.month, date.day);
-    return _bookingBox.values.where((b) =>
-    b.date.year == dayOnly.year &&
-        b.date.month == dayOnly.month &&
-        b.date.day == dayOnly.day
-    ).toList();
+    return bookings.where((b) {
+      final bd = b.date;
+      final bdDay = DateTime(bd.year, bd.month, bd.day);
+      return bdDay == dayOnly;
+    }).toList();
   }
 
   bool isSlotBooked(DateTime date, String hallName, String slotLabel) {
-    return _bookingBox.values.any((b) =>
-    b.date.year == date.year &&
-        b.date.month == date.month &&
-        b.date.day == date.day &&
-        b.hallName == hallName &&
-        b.slotLabel == slotLabel
-    );
+    return bookings.any((b) {
+      final bd = b.date;
+      final bdDay = DateTime(bd.year, bd.month, bd.day);
+      return bdDay == DateTime(date.year, date.month, date.day) &&
+          b.hallName == hallName &&
+          b.slotLabel == slotLabel;
+    });
   }
 
-  void createBooking(BanquetBooking booking) {
-    _bookingBox.add(booking);
-    notifyListeners();
+  Future<void> createBooking(BanquetBooking booking) async {
+    await _bookingCol.add(booking.toMap());
   }
 
-  void updateBooking(BanquetBooking booking) {
-    booking.save();
-    notifyListeners();
+  Future<void> updateBooking(String docId, BanquetBooking booking) async {
+    await _bookingCol.doc(docId).update(booking.toMap());
   }
 }

@@ -1,4 +1,4 @@
-package com.example.tokenmanagement
+package com.example.token_manager
 
 import io.flutter.embedding.android.FlutterActivity
 

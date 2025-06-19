@@ -1,11 +1,25 @@
-import 'package:hive/hive.dart';
+// lib/models/hall.dart
 
-part 'hall.g.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-@HiveType(typeId: 2)
-class Hall extends HiveObject {
-  @HiveField(0)
+// All Hive-related code has been removed.
+
+class Hall { // No longer extends HiveObject
   String name;
 
   Hall({required this.name});
+
+  /// Convert this Hall to a Firestore map
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+    };
+  }
+
+  /// Create a Hall from Firestore data
+  factory Hall.fromMap(Map<String, dynamic> map) {
+    return Hall(
+      name: map['name'] ?? '',
+    );
+  }
 }

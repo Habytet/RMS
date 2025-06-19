@@ -5,26 +5,30 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Paste this entire block into your android/app/build.gradle.kts file
+
 android {
-    namespace = "com.example.tokenmanagement"
-    compileSdk = flutter.compileSdkVersion
+    namespace = "com.example.token_manager"
+    // It's best practice to use a recent compileSdk. 34 is current.
+    compileSdk = 35
+
+    // FIX #1: Set the specific NDK version required by Firebase.
     ndkVersion = "27.0.12077973"
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        // Sticking to Java 1.8 is often safer for broader library compatibility.
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = "1.8"
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.tokenmanagement"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        applicationId = "com.example.token_manager"
+        // FIX #2: Increase minSdk to 23 as required by firebase-auth.
+        minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -32,8 +36,6 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
     }

@@ -13,8 +13,12 @@ import 'banquet_calendar_screen.dart';
 
 class EditBookingPage extends StatefulWidget {
   final BanquetBooking booking;
+  final String docId;          // ← add this
 
-  const EditBookingPage({required this.booking});
+  const EditBookingPage({
+    required this.booking,
+    required this.docId,        // ← add here
+  });
 
   @override
   State<EditBookingPage> createState() => _EditBookingPageState();
@@ -88,8 +92,10 @@ class _EditBookingPageState extends State<EditBookingPage> {
       ..menu = _selectedMenu!.name +
           _selectedItems.entries.map((e) => '\n${e.key}: ${e.value.join(", ")}').join();
 
-    context.read<BanquetProvider>().updateBooking(updated);
-    Navigator.pop(context);
+    context.read<BanquetProvider>().updateBooking(
+      widget.docId,           // ← pass the doc ID
+      updated,
+    );    Navigator.pop(context);
   }
 
   @override
