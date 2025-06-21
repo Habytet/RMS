@@ -12,7 +12,11 @@ class Customer {
   int children;
   String? operator;
   String? waiterName;
-  bool isCalled; // --- NEW FIELD to track if the customer has been called ---
+  bool isCalled;
+
+  // --- NEW: A field to hold the branch name for display purposes ---
+  // This field is NOT saved to Firestore, it's assigned at runtime by the provider.
+  String? branchName;
 
   Customer({
     required this.token,
@@ -24,7 +28,8 @@ class Customer {
     this.children = 0,
     this.operator,
     this.waiterName,
-    this.isCalled = false, // --- ADDED TO CONSTRUCTOR ---
+    this.isCalled = false,
+    this.branchName, // --- ADDED to constructor ---
   });
 
   Map<String, dynamic> toMap() {
@@ -38,7 +43,8 @@ class Customer {
       'children': children,
       'operator': operator,
       'waiterName': waiterName,
-      'isCalled': isCalled, // --- ADDED TO MAP ---
+      'isCalled': isCalled,
+      // We don't save branchName here because it's derived from the document's location
     };
   }
 
@@ -53,7 +59,8 @@ class Customer {
       children: map['children'] ?? 0,
       operator: map['operator'],
       waiterName: map['waiterName'],
-      isCalled: map['isCalled'] ?? false, // --- ADDED FROM MAP ---
+      isCalled: map['isCalled'] ?? false,
+      // branchName is assigned later by the provider, not read from the map
     );
   }
 }

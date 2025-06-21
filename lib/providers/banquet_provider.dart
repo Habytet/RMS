@@ -1,3 +1,5 @@
+// lib/providers/banquet_provider.dart
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/hall.dart';
@@ -5,34 +7,53 @@ import '../models/slot.dart';
 import '../models/banquet_booking.dart';
 
 class BanquetProvider extends ChangeNotifier {
-  final _hallCol = FirebaseFirestore.instance.collection('halls');
-  final _slotCol = FirebaseFirestore.instance.collection('slots');
-  final _bookingCol = FirebaseFirestore.instance.collection('banquetBookings');
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final String branchId;
+
+  // These will now point to a specific branch's subcollection
+  late final CollectionReference _hallCol;
+  late final CollectionReference _slotCol;
+  late final CollectionReference _bookingCol;
 
   List<Hall> halls = [];
   List<Slot> slots = [];
   List<BanquetBooking> bookings = [];
 
-  BanquetProvider() {
-    _init();
+  // --- FIX: The constructor now accepts the branchId ---
+  BanquetProvider({required this.branchId}) {
+    // --- FIX: Firestore paths are now built dynamically using the branchId ---
+    // This creates paths like 'branches/branch_A/halls'
+    final branchDoc = _firestore.collection('branches').doc(branchId);
+    _hallCol = branchDoc.collection('halls');
+    _slotCol = branchDoc.collection('slots');
+    _bookingCol = branchDoc.collection('banquetBookings');
+
+    // Only start listening for data if a specific branch is selected
+    if (branchId != 'all') {
+      _init();
+    }
   }
 
   void _init() {
+    // These listeners will now only get data for the specified branch
     _hallCol.snapshots().listen((snapshot) {
-      halls = snapshot.docs.map((doc) => Hall.fromMap(doc.data())).toList();
+      halls = snapshot.docs.map((doc) => Hall.fromMap(doc.data() as Map<String, dynamic>)).toList();
       notifyListeners();
     });
 
     _slotCol.snapshots().listen((snapshot) {
-      slots = snapshot.docs.map((doc) => Slot.fromMap(doc.data())).toList();
+      slots = snapshot.docs.map((doc) => Slot.fromMap(doc.data() as Map<String, dynamic>)).toList();
       notifyListeners();
     });
 
     _bookingCol.snapshots().listen((snapshot) {
-      bookings = snapshot.docs.map((doc) => BanquetBooking.fromMap(doc.data())).toList();
+      bookings = snapshot.docs.map((doc) => BanquetBooking.fromMap(doc.data() as Map<String, dynamic>)).toList();
       notifyListeners();
     });
   }
+
+  // The rest of the functions work as before, but now they operate
+  // on the branch-specific collections defined in the constructor.
 
   Future<void> addHall(String name) async {
     final hall = Hall(name: name);

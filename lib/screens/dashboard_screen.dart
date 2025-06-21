@@ -4,25 +4,31 @@ import '../providers/user_provider.dart';
 import '../models/app_user.dart';
 
 class DashboardScreen extends StatelessWidget {
+  const DashboardScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<UserProvider>().currentUser;
+    final authStatus = context.watch<UserProvider>().authStatus;
+    final user = context.read<UserProvider>().currentUser;
 
-    if (user == null) {
-      Future.microtask(() => Navigator.pushReplacementNamed(context, '/'));
-      return Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (authStatus == AuthStatus.unauthenticated) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (authStatus == AuthStatus.unknown || user == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Dashboard'),
+        title: const Text('Dashboard'),
         actions: [
           IconButton(
-            icon: Icon(Icons.logout),
-            onPressed: () {
-              context.read<UserProvider>().logout();
-              Navigator.pushReplacementNamed(context, '/');
-            },
+            icon: const Icon(Icons.logout),
+            onPressed: () => context.read<UserProvider>().logout(),
           )
         ],
       ),
@@ -42,9 +48,10 @@ class DashboardScreen extends StatelessWidget {
               _moduleCard(context, 'Reports', Icons.bar_chart, () {
                 _openReportsModule(context, user);
               }),
-            if (user.isAdmin) _moduleCard(context, 'Admin', Icons.admin_panel_settings, () {
-              _openAdminModule(context, user);
-            }),
+            if (user.isAdmin)
+              _moduleCard(context, 'Admin', Icons.admin_panel_settings, () {
+                _openAdminModule(context, user);
+              }),
           ],
         ),
       ),
@@ -62,8 +69,8 @@ class DashboardScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icon, size: 32),
-              SizedBox(width: 16),
-              Text(label, style: TextStyle(fontSize: 24)),
+              const SizedBox(width: 16),
+              Text(label, style: const TextStyle(fontSize: 24)),
             ],
           ),
         ),
@@ -73,51 +80,36 @@ class DashboardScreen extends StatelessWidget {
 
   void _openQueueModule(BuildContext context, AppUser user) {
     final items = <Map<String, String>>[];
-
+    if (user.adminDisplayEnabled) {
+      items.add({'title': 'Admin Display', 'route': '/queue/admin_display'});
+    }
     if (user.podiumEnabled) items.add({'title': 'Podium Operator', 'route': '/podium'});
     if (user.waiterEnabled) items.add({'title': 'Waiter', 'route': '/waiter'});
     if (user.customerEnabled) items.add({'title': 'Customer Display', 'route': '/customer'});
-
     _openSubMenu(context, 'Queue Module', items);
   }
 
   void _openBanquetModule(BuildContext context, AppUser user) {
     final items = <Map<String, String>>[];
-
-    if (user.banquetBookingEnabled || user.isAdmin) {
-      items.add({'title': 'Banquet Booking', 'route': '/banquet'});
-    }
-    if (user.isAdmin) {
-      items.add({'title': 'Banquet Setup', 'route': '/banquet/setup'});
-      items.add({'title': 'View Bookings', 'route': '/banquet/bookings'});
-    }
-
+    if (user.banquetBookingEnabled || user.isAdmin) items.add({'title': 'Banquet Booking', 'route': '/banquet'});
+    if (user.isAdmin) items.add({'title': 'Banquet Setup', 'route': '/banquet/setup'});
+    if (user.isAdmin) items.add({'title': 'View Bookings', 'route': '/banquet/bookings'});
     _openSubMenu(context, 'Banquet Module', items);
   }
 
   void _openReportsModule(BuildContext context, AppUser user) {
     final items = <Map<String, String>>[];
-
-    if (user.queueReportsEnabled || user.isAdmin) {
-      items.add({'title': 'Queue Reports', 'route': '/admin/queue_reports'});
-    }
-    if (user.banquetReportsEnabled || user.isAdmin) {
-    }
-    if (user.isAdmin) {
-      items.add({'title': 'Legacy Reports', 'route': '/admin/reports'});
-    }
-
+    if (user.queueReportsEnabled || user.isAdmin) items.add({'title': 'Queue Reports', 'route': '/admin/queue_reports'});
     _openSubMenu(context, 'Reports', items);
   }
 
   void _openAdminModule(BuildContext context, AppUser user) {
     final items = <Map<String, String>>[];
-
     if (user.isAdmin) {
       items.add({'title': 'User Management', 'route': '/admin/users'});
       items.add({'title': 'Menu Management', 'route': '/admin/menus'});
+      items.add({'title': 'Branch Management', 'route': '/admin/branches'});
     }
-
     _openSubMenu(context, 'Admin Module', items);
   }
 
@@ -127,8 +119,8 @@ class DashboardScreen extends StatelessWidget {
       builder: (_) => ListView(
         shrinkWrap: true,
         children: [
-          ListTile(title: Text(title, style: TextStyle(fontWeight: FontWeight.bold))),
-          Divider(),
+          ListTile(title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold))),
+          const Divider(),
           ...items.map((i) => ListTile(
             title: Text(i['title']!),
             onTap: () {

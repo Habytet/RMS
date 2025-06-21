@@ -10,6 +10,8 @@ class AppUser {
   final bool banquetBookingEnabled;
   final bool banquetReportsEnabled;
   final bool queueReportsEnabled;
+  // --- NEW: Permission for the corporate admin display screen ---
+  final bool adminDisplayEnabled;
 
   AppUser({
     required this.username,
@@ -21,6 +23,8 @@ class AppUser {
     this.banquetBookingEnabled = false,
     this.banquetReportsEnabled = false,
     this.queueReportsEnabled = false,
+    // --- NEW: Added to constructor with a default of false ---
+    this.adminDisplayEnabled = false,
   });
 
   bool get isAdmin => username.toLowerCase() == 'admin';
@@ -36,6 +40,8 @@ class AppUser {
       'banquetBookingEnabled': banquetBookingEnabled,
       'banquetReportsEnabled': banquetReportsEnabled,
       'queueReportsEnabled': queueReportsEnabled,
+      // --- NEW: Added to the map for saving to Firestore ---
+      'adminDisplayEnabled': adminDisplayEnabled,
     };
   }
 
@@ -50,6 +56,8 @@ class AppUser {
       banquetBookingEnabled: map['banquetBookingEnabled'] ?? false,
       banquetReportsEnabled: map['banquetReportsEnabled'] ?? false,
       queueReportsEnabled: map['queueReportsEnabled'] ?? false,
+      // --- NEW: Reads the new permission from Firestore ---
+      adminDisplayEnabled: map['adminDisplayEnabled'] ?? false,
     );
   }
 }

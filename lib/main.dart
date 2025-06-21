@@ -3,28 +3,17 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
-// Models (Hive adapters still registered for offline caching)
-import 'models/customer.dart';
-import 'models/app_user.dart';
-import 'models/hall.dart';
-import 'models/slot.dart';
-import 'models/banquet_booking.dart';
-import 'models/menu.dart';
-import 'models/menu_category.dart';
-import 'models/menu_item.dart';
-
-// Providers
 import 'providers/user_provider.dart';
 import 'providers/token_provider.dart';
 import 'providers/banquet_provider.dart';
 
-// Screens
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/admin/user_management_screen.dart';
 import 'screens/admin/menu_management_screen.dart';
-import 'screens/admin/reports_screen.dart';
+import 'screens/admin/branch_management_screen.dart';
 import 'screens/admin/queue_reports_screen.dart';
+import 'screens/queue/admin_display_screen.dart';
 import 'screens/podium_operator_screen.dart';
 import 'screens/waiter_table_screen.dart';
 import 'screens/customer_screen.dart';
@@ -36,54 +25,62 @@ import 'screens/banquet/select_menu_items_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Launch the app with providers
+  // In lib/main.dart
+
+// ... (keep your existing imports)
+
   runApp(
     MultiProvider(
       providers: [
-        // UserProvider manages authentication and branch context
-        ChangeNotifierProvider(
-          create: (_) => UserProvider(),
-        ),
+        // UserProvider is the source of truth for auth and user profile
+        ChangeNotifierProvider(create: (_) => UserProvider()),
 
-        // TokenProvider scoped to the current branch from UserProvider
+        // These ProxyProviders depend on UserProvider.
+        // They will automatically update when the logged-in user or branch changes.
         ChangeNotifierProxyProvider<UserProvider, TokenProvider>(
-          create: (_) => TokenProvider(branchId: 'all'),
-          update: (_, userProv, __) =>
-              TokenProvider(branchId: userProv.currentBranchId),
+          create: (_) => TokenProvider(branchId: 'all'), // Initial provider
+          update: (_, userProvider, previousTokenProvider) => TokenProvider(
+            branchId: userProvider.currentBranchId,
+          ),
         ),
 
-        // BanquetProvider uses Firestore directly
-        ChangeNotifierProvider(create: (_) => BanquetProvider()),
+        ChangeNotifierProxyProvider<UserProvider, BanquetProvider>(
+          create: (_) => BanquetProvider(branchId: 'all'), // Initial provider
+          update: (_, userProvider, previousBanquetProvider) => BanquetProvider(
+            branchId: userProvider.currentBranchId,
+          ),
+        ),
       ],
-      child: MyApp(),
+      child: const MyApp(),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Token & Banquet Manager',
       theme: ThemeData(primarySwatch: Colors.blue),
-      initialRoute: '/',
+      home: const AuthWrapper(),
       routes: {
-        '/': (_) => LoginScreen(),
+        '/login': (_) => const LoginScreen(),
         '/dashboard': (_) => DashboardScreen(),
-        '/admin/users': (_) => UserManagementScreen(),
+        '/admin/users': (_) => const UserManagementScreen(),
         '/admin/menus': (_) => MenuManagementScreen(),
-        '/admin/reports': (_) => ReportsScreen(),
-        '/admin/queue_reports': (_) => QueueReportsScreen(),
+        '/admin/branches': (_) => const BranchManagementScreen(),
+        '/admin/queue_reports': (_) => const QueueReportsScreen(),
+        '/queue/admin_display': (_) => const AdminDisplayScreen(),
         '/podium': (_) => PodiumOperatorScreen(),
         '/waiter': (_) => WaiterTableScreen(),
         '/customer': (_) => CustomerScreen(),
-        '/banquet': (_) => BanquetCalendarScreen(),
+        '/banquet': (_) => const BanquetCalendarScreen(),
         '/banquet/setup': (_) => HallSlotManagementScreen(),
         '/banquet/bookings': (_) => BanquetBookingsReportScreen(),
       },
@@ -110,5 +107,24 @@ class MyApp extends StatelessWidget {
         }
       },
     );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final authStatus = context.watch<UserProvider>().authStatus;
+    switch (authStatus) {
+      case AuthStatus.authenticated:
+        return DashboardScreen();
+      case AuthStatus.unauthenticated:
+        return const LoginScreen();
+      case AuthStatus.unknown:
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        );
+    }
   }
 }

@@ -1,5 +1,4 @@
-// lib/providers/token_provider.dart
-
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/customer.dart';
@@ -8,36 +7,77 @@ class TokenProvider extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final String branchId;
 
-  late final Query<Map<String, dynamic>> _queueCol;
-  late final CollectionReference<Map<String, dynamic>> _completedCol;
-  late final DocumentReference<Map<String, dynamic>> _settingsDoc;
+  late final Query<Map<String, dynamic>> _queueQuery;
+  late final CollectionReference<Map<String, dynamic>>? _completedCol;
+  late final DocumentReference<Map<String, dynamic>>? _settingsDoc;
 
+  StreamSubscription? _queueSubscription;
+  StreamSubscription? _settingsSubscription;
+
+  // --- State Variables ---
   int _nextToken = 1;
   int? _nowServing;
   List<Customer> _queue = [];
-  List<Customer> _allHistory = [];
   List<int> _availableTables = [];
+  bool _isLoading = true;
 
+  // --- Getters ---
   int get nextToken => _nextToken;
   int? get nowServing => _nowServing;
   List<Customer> get queue => _queue;
-  List<Customer> get allHistory => _allHistory;
   List<int> get availableTables => List.unmodifiable(_availableTables);
+  bool get isLoading => _isLoading;
 
   TokenProvider({required this.branchId}) {
-    _queueCol = _firestore.collection('branches/$branchId/queue').orderBy('token');
-    _completedCol = _firestore.collection('branches/$branchId/completed');
-    _settingsDoc = _firestore.collection('branches').doc(branchId);
     _init();
   }
 
   void _init() {
-    _queueCol.snapshots().listen((snapshot) {
+    _isLoading = true;
+    notifyListeners();
+
+    _queueSubscription?.cancel();
+    _settingsSubscription?.cancel();
+
+    if (branchId == 'all') {
+      _queueQuery = _firestore.collectionGroup('queue').orderBy('token');
+      _completedCol = null;
+      _settingsDoc = null;
+      _listenToQueueCollectionGroup();
+      _resetLocalStateForAdmin();
+    } else {
+      final branchRef = _firestore.collection('branches').doc(branchId);
+      _queueQuery = branchRef.collection('queue').orderBy('token');
+      _completedCol = branchRef.collection('completed');
+      _settingsDoc = branchRef;
+      _listenToQueue();
+      _listenToSettings();
+    }
+  }
+
+  void _listenToQueue() {
+    _queueSubscription = _queueQuery.snapshots().listen((snapshot) {
       _queue = snapshot.docs.map((doc) => Customer.fromMap(doc.data())).toList();
+      _isLoading = false;
       notifyListeners();
     });
-    _settingsDoc.snapshots().listen((docSnapshot) {
-      final data = docSnapshot.data();
+  }
+
+  void _listenToQueueCollectionGroup() {
+    _queueSubscription = _queueQuery.snapshots().listen((snapshot) {
+      _queue = snapshot.docs.map((doc) {
+        final customer = Customer.fromMap(doc.data());
+        customer.branchName = doc.reference.parent.parent?.id ?? 'Unknown';
+        return customer;
+      }).toList();
+      _isLoading = false;
+      notifyListeners();
+    });
+  }
+
+  void _listenToSettings() {
+    _settingsSubscription = _settingsDoc!.snapshots().listen((snap) {
+      final data = snap.data();
       if (data != null) {
         _nowServing = data['nowServing'] as int?;
         _nextToken = data['nextToken'] as int? ?? 1;
@@ -45,77 +85,100 @@ class TokenProvider extends ChangeNotifier {
         notifyListeners();
       }
     });
-    _completedCol.orderBy('registeredAt', descending: true).limit(20).snapshots().listen((snapshot) {
-      _allHistory = snapshot.docs.map((doc) => Customer.fromMap(doc.data())).toList();
-      notifyListeners();
-    });
   }
 
-  Future<List<Customer>> fetchHistoryByDateRange(DateTimeRange range) async {
-    final start = Timestamp.fromDate(range.start);
-    final end = Timestamp.fromDate(DateTime(range.end.year, range.end.month, range.end.day, 23, 59, 59));
-    final querySnapshot = await _completedCol.where('registeredAt', isGreaterThanOrEqualTo: start).where('registeredAt', isLessThanOrEqualTo: end).get();
-    final customers = querySnapshot.docs.map((doc) => Customer.fromMap(doc.data())).toList();
-    customers.sort((a, b) => b.registeredAt.compareTo(a.registeredAt));
-    return customers;
+  void _resetLocalStateForAdmin() {
+    _nextToken = 0;
+    _nowServing = null;
+    _availableTables = [];
   }
 
   Future<void> addCustomer(String name, String phone, int pax, int children, String operatorName) async {
-    final customer = Customer(token: _nextToken, name: name, phone: phone, pax: pax, children: children, registeredAt: DateTime.now(), operator: operatorName, isCalled: false);
-    await _firestore.collection('branches/$branchId/queue').doc(customer.token.toString()).set(customer.toMap());
-    final newNextToken = _nextToken + 1;
-    await _settingsDoc.set({'nextToken': newNextToken}, SetOptions(merge: true));
+    if (branchId == 'all' || _settingsDoc == null) {
+      throw Exception("Cannot add customer in 'All Branches' view.");
+    }
+    await _firestore.runTransaction((transaction) async {
+      final settingsSnap = await transaction.get(_settingsDoc!);
+      final currentToken = settingsSnap.data()?['nextToken'] as int? ?? 1;
+      final newCustomer = Customer(
+        token: currentToken,
+        name: name,
+        phone: phone,
+        pax: pax,
+        children: children,
+        registeredAt: DateTime.now(),
+        operator: operatorName,
+        isCalled: false,
+      );
+      final newCustomerRef = _settingsDoc!.collection('queue').doc(currentToken.toString());
+      transaction.set(newCustomerRef, newCustomer.toMap());
+      transaction.update(_settingsDoc!, {'nextToken': currentToken + 1});
+    });
+  }
+
+  // --- THIS IS THE FIX ---
+  // Reverted the logic back to using a List to allow duplicate table numbers.
+  Future<void> addTable(int tableNumber) async {
+    if (branchId == 'all' || _settingsDoc == null) {
+      throw Exception("Cannot add table in 'All Branches' view.");
+    }
+    await _firestore.runTransaction((tx) async {
+      final snap = await tx.get(_settingsDoc!);
+      // Use a List instead of a Set to allow duplicates.
+      final currentTables = List<int>.from(snap.data()?['availableTables'] ?? []);
+      currentTables.add(tableNumber);
+      // Sort the list for consistent display.
+      currentTables.sort();
+      tx.update(_settingsDoc!, {'availableTables': currentTables});
+    });
+  }
+
+  @override
+  void dispose() {
+    _queueSubscription?.cancel();
+    _settingsSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> markAsCalled(int token) async {
-    await _firestore.collection('branches/$branchId/queue').doc(token.toString()).update({'isCalled': true});
+    if (branchId == 'all') {
+      throw Exception("Cannot mark as called in 'All Branches' view.");
+    }
+    await _firestore
+        .collection('branches/$branchId/queue')
+        .doc(token.toString())
+        .update({'isCalled': true, 'calledAt': FieldValue.serverTimestamp()});
   }
 
-  // --- FIX for the Dismissible Bug ---
-  // The old `callNext` method has been replaced by the following two methods.
-
-  /// This is the new public method that the UI will call upon swiping.
   void seatCustomer(Customer customer, String waiterName) {
-    // Step 1: Remove the customer from the local list immediately.
+    if (branchId == 'all' || _completedCol == null) {
+      throw Exception("Cannot seat customer in 'All Branches' view.");
+    }
     _queue.removeWhere((c) => c.token == customer.token);
-
-    // Step 2: Notify the UI right away to rebuild without the dismissed item.
-    // This synchronous update prevents the red screen error.
     notifyListeners();
-
-    // Step 3: Perform the database operations in the background.
     _moveCustomerToCompleted(customer, waiterName);
   }
 
-  /// This is now a private helper method for the database logic.
   Future<void> _moveCustomerToCompleted(Customer customer, String waiterName) async {
-    // Set the final "seated at" time and waiter name
-    customer.calledAt = DateTime.now();
     customer.waiterName = waiterName;
-
-    // Add to the 'completed' collection in Firestore
-    await _completedCol.add(customer.toMap());
-
-    // Delete from the 'queue' collection in Firestore
-    await _firestore.collection('branches/$branchId/queue').doc(customer.token.toString()).delete();
-
-    // Update the 'nowServing' token
-    await _settingsDoc.set({'nowServing': customer.token}, SetOptions(merge: true));
+    await _completedCol!.add(customer.toMap());
+    await _firestore
+        .collection('branches/$branchId/queue')
+        .doc(customer.token.toString())
+        .delete();
+    await _settingsDoc!.set({'nowServing': customer.token}, SetOptions(merge: true));
   }
 
-  /// Mark a table as available. Allows duplicates and updates the UI instantly.
-  Future<void> addTable(int tableNumber) async {
-    _availableTables.add(tableNumber);
-    _availableTables.sort();
-    notifyListeners();
-    await _settingsDoc.set({'availableTables': _availableTables}, SetOptions(merge: true));
-  }
-
-  /// Remove a table from availability and update the UI instantly.
   Future<void> removeTable(int tableNumber) async {
-    if (_availableTables.remove(tableNumber)) {
-      notifyListeners();
-      await _settingsDoc.set({'availableTables': _availableTables}, SetOptions(merge: true));
+    if (branchId == 'all' || _settingsDoc == null) {
+      throw Exception("Cannot remove table in 'All Branches' view.");
     }
+    await _firestore.runTransaction((tx) async {
+      final snap = await tx.get(_settingsDoc!);
+      final currentTables = List<int>.from(snap.data()?['availableTables'] ?? []);
+      // This correctly removes only the first instance of the number, which is what you want.
+      currentTables.remove(tableNumber);
+      tx.update(_settingsDoc!, {'availableTables': currentTables});
+    });
   }
 }

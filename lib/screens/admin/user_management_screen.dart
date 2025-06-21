@@ -59,8 +59,12 @@ class ExistingUsersList extends StatelessWidget {
       stream: query.snapshots() as Stream<QuerySnapshot<Map<String, dynamic>>>,
       builder: (context, snapshot) {
         if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
-        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-        if (snapshot.data!.docs.isEmpty) return const Center(child: Text('No users found.'));
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text('No users found.'));
+        }
 
         final docs = snapshot.data!.docs;
         return ListView(
@@ -100,10 +104,12 @@ class _CreateUserFormState extends State<CreateUserForm> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  String? _selectedBranchId;
   bool _isLoading = false;
   Map<String, bool> _roles = {
     'podiumEnabled': false, 'waiterEnabled': false, 'customerEnabled': false,
     'banquetBookingEnabled': false, 'banquetReportsEnabled': false, 'queueReportsEnabled': false,
+    'adminDisplayEnabled': false,
   };
 
   @override
@@ -116,14 +122,14 @@ class _CreateUserFormState extends State<CreateUserForm> {
   Future<void> _createUser() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
-
     final email = _emailController.text.trim();
     final username = email.split('@').first;
     final profile = AppUser(
-      username: username, email: email, branchId: context.read<UserProvider>().currentBranchId,
+      username: username, email: email, branchId: _selectedBranchId!,
       podiumEnabled: _roles['podiumEnabled']!, waiterEnabled: _roles['waiterEnabled']!,
       customerEnabled: _roles['customerEnabled']!, banquetBookingEnabled: _roles['banquetBookingEnabled']!,
       banquetReportsEnabled: _roles['banquetReportsEnabled']!, queueReportsEnabled: _roles['queueReportsEnabled']!,
+      adminDisplayEnabled: _roles['adminDisplayEnabled']!,
     );
     try {
       await context.read<UserProvider>().addUser(email, _passwordController.text.trim(), profile);
@@ -132,7 +138,10 @@ class _CreateUserFormState extends State<CreateUserForm> {
         _formKey.currentState!.reset();
         _emailController.clear();
         _passwordController.clear();
-        setState(() => _roles.updateAll((key, value) => false));
+        setState(() {
+          _selectedBranchId = null;
+          _roles.updateAll((key, value) => false);
+        });
       }
     } on FirebaseAuthException catch(e) {
       if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.message}'), backgroundColor: Colors.red));
@@ -143,6 +152,18 @@ class _CreateUserFormState extends State<CreateUserForm> {
 
   @override
   Widget build(BuildContext context) {
+    // FIX: Watch the provider to get branches AND the loading state
+    final userProvider = context.watch<UserProvider>();
+    final branches = userProvider.branches;
+    final isLoadingBranches = userProvider.isLoadingBranches;
+
+    final List<DropdownMenuItem<String>> branchItems = [
+      const DropdownMenuItem(value: 'all', child: Text('All Branches (Corporate)')),
+      ...branches
+          .where((branch) => branch.id != 'all')
+          .map((branch) => DropdownMenuItem(value: branch.id, child: Text(branch.name))),
+    ];
+
     return Form(
       key: _formKey,
       child: ListView(
@@ -150,6 +171,21 @@ class _CreateUserFormState extends State<CreateUserForm> {
         children: [
           TextFormField(controller: _emailController, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email'), validator: (v) => v!.isEmpty ? 'Please enter an email' : null),
           TextFormField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'Password'), validator: (v) => v!.length < 6 ? 'Password must be at least 6 characters' : null),
+          const SizedBox(height: 16),
+
+          // FIX: Show a loading indicator if branches are loading, otherwise show the dropdown
+          if (isLoadingBranches)
+            const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 20.0), child: CircularProgressIndicator()))
+          else
+            DropdownButtonFormField<String>(
+              value: _selectedBranchId,
+              hint: const Text('Select Branch'),
+              decoration: const InputDecoration(border: OutlineInputBorder()),
+              items: branchItems,
+              onChanged: (value) => setState(() => _selectedBranchId = value),
+              validator: (value) => value == null ? 'Please select a branch' : null,
+            ),
+
           const SizedBox(height: 20),
           const Text('User Roles & Permissions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ..._roles.keys.map((key) => SwitchListTile(title: Text(key.replaceAll('Enabled', '')), value: _roles[key]!, onChanged: (v) => setState(() => _roles[key] = v))).toList(),
@@ -164,7 +200,7 @@ class _CreateUserFormState extends State<CreateUserForm> {
   }
 }
 
-// --- WIDGET: SCREEN FOR EDITING AN EXISTING USER (with DELETE button) ---
+// --- WIDGET: SCREEN FOR EDITING AN EXISTING USER ---
 class EditUserScreen extends StatefulWidget {
   final String userId;
   final AppUser user;
@@ -176,25 +212,29 @@ class EditUserScreen extends StatefulWidget {
 
 class _EditUserScreenState extends State<EditUserScreen> {
   late Map<String, bool> _roles;
+  late String _selectedBranchId;
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
+    _selectedBranchId = widget.user.branchId;
     _roles = {
       'podiumEnabled': widget.user.podiumEnabled, 'waiterEnabled': widget.user.waiterEnabled,
       'customerEnabled': widget.user.customerEnabled, 'banquetBookingEnabled': widget.user.banquetBookingEnabled,
       'banquetReportsEnabled': widget.user.banquetReportsEnabled, 'queueReportsEnabled': widget.user.queueReportsEnabled,
+      'adminDisplayEnabled': widget.user.adminDisplayEnabled,
     };
   }
 
   Future<void> _updateUser() async {
     setState(() => _isLoading = true);
     final updatedProfile = AppUser(
-      username: widget.user.username, email: widget.user.email, branchId: widget.user.branchId,
+      username: widget.user.username, email: widget.user.email, branchId: _selectedBranchId,
       podiumEnabled: _roles['podiumEnabled']!, waiterEnabled: _roles['waiterEnabled']!,
       customerEnabled: _roles['customerEnabled']!, banquetBookingEnabled: _roles['banquetBookingEnabled']!,
       banquetReportsEnabled: _roles['banquetReportsEnabled']!, queueReportsEnabled: _roles['queueReportsEnabled']!,
+      adminDisplayEnabled: _roles['adminDisplayEnabled']!,
     );
     try {
       await context.read<UserProvider>().updateUser(widget.userId, updatedProfile);
@@ -209,7 +249,6 @@ class _EditUserScreenState extends State<EditUserScreen> {
     }
   }
 
-  // --- NEW: Function to handle user deletion ---
   Future<void> _deleteUser() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -222,21 +261,16 @@ class _EditUserScreenState extends State<EditUserScreen> {
         ],
       ),
     );
-
     if (confirm != true) return;
-
     setState(() => _isLoading = true);
     try {
       await context.read<UserProvider>().deleteUser(widget.userId);
       if(mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('User profile deleted.'), backgroundColor: Colors.green));
-        // Pop back to the user list screen
         Navigator.of(context).pop();
       }
     } catch(e) {
-      if(mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red));
-      }
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red));
     } finally {
       if(mounted) setState(() => _isLoading = false);
     }
@@ -244,27 +278,53 @@ class _EditUserScreenState extends State<EditUserScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // FIX: Watch the provider to get branches AND the loading state
+    final userProvider = context.watch<UserProvider>();
+    final branches = userProvider.branches;
+    final isLoadingBranches = userProvider.isLoadingBranches;
+
+    final List<DropdownMenuItem<String>> branchItems = [
+      const DropdownMenuItem(value: 'all', child: Text('All Branches (Corporate)')),
+      ...branches
+          .where((branch) => branch.id != 'all')
+          .map((branch) => DropdownMenuItem(value: branch.id, child: Text(branch.name))),
+    ];
+
     return Scaffold(
       appBar: AppBar(title: Text('Edit ${widget.user.username}')),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
+          const Text('Assign to Branch', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+
+          // FIX: Show a loading indicator if branches are loading, otherwise show the dropdown
+          if (isLoadingBranches)
+            const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 20.0), child: CircularProgressIndicator()))
+          else
+            DropdownButtonFormField<String>(
+              value: _selectedBranchId,
+              items: branchItems,
+              onChanged: (value) {
+                if(value != null) setState(() => _selectedBranchId = value);
+              },
+              decoration: const InputDecoration(border: OutlineInputBorder()),
+            ),
+
+          const SizedBox(height: 24),
+          const Text('Permissions', style: TextStyle(fontWeight: FontWeight.bold)),
           ..._roles.keys.map((key) => SwitchListTile(title: Text(key.replaceAll('Enabled', '')), value: _roles[key]!, onChanged: (v) => setState(() => _roles[key] = v))).toList(),
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: _isLoading ? null : _updateUser,
             child: _isLoading ? const CircularProgressIndicator() : const Text('Save Changes'),
           ),
-          // --- NEW: Added Divider and Delete Button ---
           const Divider(height: 40, color: Colors.grey),
           ElevatedButton.icon(
             icon: const Icon(Icons.delete_forever),
             label: const Text('Delete User'),
             onPressed: _isLoading ? null : _deleteUser,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade700,
-              foregroundColor: Colors.white,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700, foregroundColor: Colors.white),
           )
         ],
       ),

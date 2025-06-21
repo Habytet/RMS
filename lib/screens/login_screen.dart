@@ -1,11 +1,11 @@
-// lib/screens/login_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -16,7 +16,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   String _error = '';
   bool _isLoading = false;
-  // --- NEW: State for the forgot password button ---
   bool _isResettingPassword = false;
 
   @override
@@ -26,7 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _attemptLogin() async {
+  Future<void> _attemptLogin() async {
     if (_isLoading) return;
     setState(() {
       _error = '';
@@ -37,27 +36,16 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text.trim();
 
     try {
-      final success = await context.read<UserProvider>().login(email, password);
-      if (success && mounted) {
-        Navigator.pushReplacementNamed(context, '/dashboard');
-        return;
-      }
+      await context.read<UserProvider>().login(email, password);
     } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        setState(() => _error = 'Error: ${e.code} — ${e.message}');
-      }
+      setState(() => _error = 'Error: ${e.code} — ${e.message}');
     } catch (e) {
-      if (mounted) {
-        setState(() => _error = 'Unhandled error: $e');
-      }
+      setState(() => _error = 'Unhandled error: $e');
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // --- NEW: Function to handle password reset ---
   Future<void> _resetPassword() async {
     final email = _emailController.text.trim();
     if (email.isEmpty) {
@@ -68,27 +56,19 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     setState(() => _isResettingPassword = true);
-
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password reset link sent! Please check your email.')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password reset link sent! Please check your email.')),
+      );
     } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.message}')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.message}')),
+      );
     } finally {
-      if (mounted) {
-        setState(() => _isResettingPassword = false);
-      }
+      if (mounted) setState(() => _isResettingPassword = false);
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -104,19 +84,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Image.asset(
                   'assets/images/samco_logo.png',
                   height: 120,
-                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.restaurant, size: 120, color: Colors.white),
+                  errorBuilder: (_, __, ___) => const Icon(Icons.restaurant, size: 120, color: Colors.white),
                 ),
               ),
               const SizedBox(height: 30),
-              const Text(
-                'Login',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
+              const Text('Login', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
               const SizedBox(height: 8),
-              const Text(
-                'Please sign in to continue.',
-                style: TextStyle(color: Colors.white70),
-              ),
+              const Text('Please sign in to continue.', style: TextStyle(color: Colors.white70)),
               const SizedBox(height: 24),
               const Text('Email', style: TextStyle(color: Colors.white)),
               const SizedBox(height: 6),
@@ -148,46 +122,33 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                   ),
                   hintText: 'Enter your password',
-                  // --- FIX 1: Faded hint text style ---
                   hintStyle: TextStyle(color: Colors.black.withOpacity(0.4)),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
                 ),
               ),
               const SizedBox(height: 8),
-
-              // --- FIX 2: "Forgot Password?" button ---
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: _isResettingPassword ? null : _resetPassword,
                   child: _isResettingPassword
-                      ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text(
-                    'Forgot Password?',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
-                  ),
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('Forgot Password?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
                 ),
               ),
               const SizedBox(height: 16),
-
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,
                   ),
                   onPressed: _isLoading ? null : _attemptLogin,
                   child: _isLoading
-                      ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
-                  )
+                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
                       : const Text('Login', style: TextStyle(fontSize: 18)),
                 ),
               ),
