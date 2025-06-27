@@ -64,11 +64,11 @@ class _MenuManagementScreenState extends State<MenuManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
-    final isAdmin = userProvider.currentUser?.isAdmin ?? false;
+    final isCorporate = userProvider.currentUser?.branchId == 'all';
     final branches = userProvider.branches;
 
     // Set default branch for admin only once
-    if (isAdmin && _selectedBranchId == null && branches.isNotEmpty) {
+    if (isCorporate && _selectedBranchId == null && branches.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() {
@@ -79,7 +79,7 @@ class _MenuManagementScreenState extends State<MenuManagementScreen> {
           _fetchHalls();
         }
       });
-    } else if (!isAdmin && _selectedBranchId == null) {
+    } else if (!isCorporate && _selectedBranchId == null) {
       _selectedBranchId = userProvider.currentBranchId;
       _fetchHalls();
     }
@@ -148,7 +148,7 @@ class _MenuManagementScreenState extends State<MenuManagementScreen> {
       appBar: AppBar(title: const Text('Menu Management')),
       body: Column(
         children: [
-          if (isAdmin)
+          if (isCorporate)
             Padding(
               padding: const EdgeInsets.all(12.0),
               child: DropdownButtonFormField<String>(

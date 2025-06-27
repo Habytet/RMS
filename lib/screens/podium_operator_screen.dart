@@ -143,6 +143,7 @@ class _PodiumOperatorScreenState extends State<PodiumOperatorScreen>
     final userProvider = context.watch<UserProvider>();
     final tokenProvider = context.watch<TokenProvider>();
     final isAdmin = userProvider.currentUser?.isAdmin ?? false;
+    final isCorporate = userProvider.currentUser?.branchId == 'all';
     final List<Branch> allBranches = userProvider.branches;
 
     // For admins, use the queue from the selected branch, otherwise use the provider's queue
@@ -198,7 +199,7 @@ class _PodiumOperatorScreenState extends State<PodiumOperatorScreen>
             padding: const EdgeInsets.all(16),
             child: ListView(
               children: [
-                if (isAdmin)
+                if (isCorporate)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12.0),
                     child: DropdownButtonFormField<String>(

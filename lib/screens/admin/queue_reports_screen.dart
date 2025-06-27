@@ -97,7 +97,7 @@ class _QueueReportsScreenState extends State<QueueReportsScreen> {
           final snapshot = await query.get();
           final branchCustomers = snapshot.docs.map((doc) {
             final customer =
-            Customer.fromMap(doc.data() as Map<String, dynamic>);
+                Customer.fromMap(doc.data() as Map<String, dynamic>);
             customer.branchName =
                 branchDoc.data()['name'] ?? branchId; // Set branch name
             return customer;
@@ -218,15 +218,33 @@ class _QueueReportsScreenState extends State<QueueReportsScreen> {
       final sheet = excel['Queue Report'];
 
       // Add headers - **REMOVED 'const' from here**
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0)).value = TextCellValue('Token');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 0)).value = TextCellValue('Customer Name');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: 0)).value = TextCellValue('Branch');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: 0)).value = TextCellValue('PAX');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: 0)).value = TextCellValue('Seated At');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: 0)).value = TextCellValue('Wait Time (mins)');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: 0)).value = TextCellValue('Called At');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: 0)).value = TextCellValue('Operator');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 8, rowIndex: 0)).value = TextCellValue('Waiter');
+      sheet
+          .cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0))
+          .value = TextCellValue('Token');
+      sheet
+          .cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 0))
+          .value = TextCellValue('Customer Name');
+      sheet
+          .cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: 0))
+          .value = TextCellValue('Branch');
+      sheet
+          .cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: 0))
+          .value = TextCellValue('PAX');
+      sheet
+          .cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: 0))
+          .value = TextCellValue('Seated At');
+      sheet
+          .cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: 0))
+          .value = TextCellValue('Wait Time (mins)');
+      sheet
+          .cell(CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: 0))
+          .value = TextCellValue('Called At');
+      sheet
+          .cell(CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: 0))
+          .value = TextCellValue('Operator');
+      sheet
+          .cell(CellIndex.indexByColumnRow(columnIndex: 8, rowIndex: 0))
+          .value = TextCellValue('Waiter');
 
       // Add data
       for (int i = 0; i < _customers.length; i++) {
@@ -236,22 +254,55 @@ class _QueueReportsScreenState extends State<QueueReportsScreen> {
             ? customer.calledAt!.difference(customer.registeredAt).inMinutes
             : 0;
 
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex)).value = IntCellValue(customer.token);
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex)).value = TextCellValue(customer.name);
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex)).value = TextCellValue(customer.branchName ?? 'N/A');
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex)).value = IntCellValue(customer.pax);
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex)).value = TextCellValue(DateFormat('dd/MM/yyyy HH:mm').format(customer.registeredAt));
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: rowIndex)).value = IntCellValue(waitTime);
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: rowIndex)).value = TextCellValue(customer.calledAt != null ? DateFormat('dd/MM/yyyy HH:mm').format(customer.calledAt!) : 'N/A');
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: rowIndex)).value = TextCellValue(customer.operator ?? 'N/A');
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 8, rowIndex: rowIndex)).value = TextCellValue(customer.waiterName ?? 'N/A');
+        sheet
+            .cell(
+                CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex))
+            .value = IntCellValue(customer.token);
+        sheet
+            .cell(
+                CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex))
+            .value = TextCellValue(customer.name);
+        sheet
+            .cell(
+                CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex))
+            .value = TextCellValue(customer.branchName ?? 'N/A');
+        sheet
+            .cell(
+                CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex))
+            .value = IntCellValue(customer.pax);
+        sheet
+                .cell(CellIndex.indexByColumnRow(
+                    columnIndex: 4, rowIndex: rowIndex))
+                .value =
+            TextCellValue(
+                DateFormat('dd/MM/yyyy HH:mm').format(customer.registeredAt));
+        sheet
+            .cell(
+                CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: rowIndex))
+            .value = IntCellValue(waitTime);
+        sheet
+            .cell(
+                CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: rowIndex))
+            .value = TextCellValue(customer.calledAt !=
+                null
+            ? DateFormat('dd/MM/yyyy HH:mm').format(customer.calledAt!)
+            : 'N/A');
+        sheet
+            .cell(
+                CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: rowIndex))
+            .value = TextCellValue(customer.operator ?? 'N/A');
+        sheet
+            .cell(
+                CellIndex.indexByColumnRow(columnIndex: 8, rowIndex: rowIndex))
+            .value = TextCellValue(customer.waiterName ?? 'N/A');
       }
 
       // Save file to a temporary directory
       final directory = await getTemporaryDirectory();
       final startDate = _range?.start ?? DateTime.now();
       final endDate = _range?.end ?? DateTime.now();
-      final fileName = 'queue_report_${DateFormat('yyyyMMdd').format(startDate)}_to_${DateFormat('yyyyMMdd').format(endDate)}.xlsx';
+      final fileName =
+          'queue_report_${DateFormat('yyyyMMdd').format(startDate)}_to_${DateFormat('yyyyMMdd').format(endDate)}.xlsx';
       final filePath = '${directory.path}/$fileName';
 
       final fileBytes = excel.encode();
@@ -319,11 +370,11 @@ class _QueueReportsScreenState extends State<QueueReportsScreen> {
               ],
               onChanged: isAdmin
                   ? (value) {
-                if (value != null) {
-                  setState(() => _selectedBranchId = value);
-                  _fetchReportData(); // Fetch data when a branch is selected
-                }
-              }
+                      if (value != null) {
+                        setState(() => _selectedBranchId = value);
+                        _fetchReportData(); // Fetch data when a branch is selected
+                      }
+                    }
                   : null, // Dropdown is disabled for non-admins
             ),
           ),
@@ -360,46 +411,46 @@ class _QueueReportsScreenState extends State<QueueReportsScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _customers.isEmpty
-                ? Center(
-                child: Text(_selectedBranchId == null
-                    ? 'Please select a branch.'
-                    : 'No data for selected range.'))
-                : SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columns: [
-                  const DataColumn(label: Text('Token')),
-                  const DataColumn(label: Text('Customer Name')),
-                  if (_selectedBranchId == 'all')
-                    const DataColumn(label: Text('Branch')),
-                  const DataColumn(label: Text('PAX')),
-                  const DataColumn(label: Text('Seated At')),
-                  const DataColumn(label: Text('Wait Time')),
-                  const DataColumn(label: Text('Operator')),
-                ],
-                rows: _customers.map((customer) {
-                  final waitTime = customer.calledAt != null
-                      ? customer.calledAt!
-                      .difference(customer.registeredAt)
-                      .inMinutes
-                      .toString()
-                      : '-';
-                  return DataRow(cells: [
-                    DataCell(Text('${customer.token}')),
-                    DataCell(Text(customer.name)),
-                    if (_selectedBranchId == 'all')
-                      DataCell(Text(customer.branchName ?? 'N/A')),
-                    DataCell(Text('${customer.pax}')),
-                    DataCell(Text(customer.registeredAt != null
-                        ? DateFormat('dd MMM, HH:mm')
-                        .format(customer.registeredAt)
-                        : '-')),
-                    DataCell(Text('$waitTime mins')),
-                    DataCell(Text(customer.operator ?? 'N/A')),
-                  ]);
-                }).toList(),
-              ),
-            ),
+                    ? Center(
+                        child: Text(_selectedBranchId == null
+                            ? 'Please select a branch.'
+                            : 'No data for selected range.'))
+                    : SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          columns: [
+                            const DataColumn(label: Text('Token')),
+                            const DataColumn(label: Text('Customer Name')),
+                            if (_selectedBranchId == 'all')
+                              const DataColumn(label: Text('Branch')),
+                            const DataColumn(label: Text('PAX')),
+                            const DataColumn(label: Text('Seated At')),
+                            const DataColumn(label: Text('Wait Time')),
+                            const DataColumn(label: Text('Operator')),
+                          ],
+                          rows: _customers.map((customer) {
+                            final waitTime = customer.calledAt != null
+                                ? customer.calledAt!
+                                    .difference(customer.registeredAt)
+                                    .inMinutes
+                                    .toString()
+                                : '-';
+                            return DataRow(cells: [
+                              DataCell(Text('${customer.token}')),
+                              DataCell(Text(customer.name)),
+                              if (_selectedBranchId == 'all')
+                                DataCell(Text(customer.branchName ?? 'N/A')),
+                              DataCell(Text('${customer.pax}')),
+                              DataCell(Text(customer.registeredAt != null
+                                  ? DateFormat('dd MMM, HH:mm')
+                                      .format(customer.registeredAt)
+                                  : '-')),
+                              DataCell(Text('$waitTime mins')),
+                              DataCell(Text(customer.operator ?? 'N/A')),
+                            ]);
+                          }).toList(),
+                        ),
+                      ),
           ),
         ],
       ),

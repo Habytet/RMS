@@ -51,7 +51,9 @@ class ExistingUsersList extends StatelessWidget {
     final currentUser = userProvider.currentUser;
 
     Query query = FirebaseFirestore.instance.collection('users');
-    if (currentUser != null && !currentUser.isAdmin) {
+    if (currentUser != null &&
+        !currentUser.isAdmin &&
+        !currentUser.userManagementEnabled) {
       query = query.where('branchId', isEqualTo: currentUser.branchId);
     }
 

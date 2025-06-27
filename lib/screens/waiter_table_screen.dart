@@ -43,14 +43,14 @@ class _WaiterTableScreenState extends State<WaiterTableScreen> {
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
     final tokenProvider = context.watch<TokenProvider>();
-    final isAdmin = userProvider.currentUser?.isAdmin ?? false;
+    final isCorporate = userProvider.currentUser?.branchId == 'all';
     final List<Branch> allBranches = userProvider.branches;
 
     // For admins, use the tables from the selected branch, otherwise use the provider's tables
     final tables = tokenProvider.availableTables;
 
     // Set default branch for admin only once
-    if (isAdmin && _selectedBranchId == null && allBranches.isNotEmpty) {
+    if (isCorporate && _selectedBranchId == null && allBranches.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() {
@@ -64,7 +64,7 @@ class _WaiterTableScreenState extends State<WaiterTableScreen> {
     }
 
     // Update TokenProvider when admin selects a branch (only when changed)
-    if (isAdmin &&
+    if (isCorporate &&
         _selectedBranchId != null &&
         _selectedBranchId != tokenProvider.adminSelectedBranchId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -78,7 +78,7 @@ class _WaiterTableScreenState extends State<WaiterTableScreen> {
       appBar: AppBar(
         title: const Text('Waiter Table Management'),
         actions: [
-          if (isAdmin)
+          if (isCorporate)
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: DropdownButton<String>(
