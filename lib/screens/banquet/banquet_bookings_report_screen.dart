@@ -39,7 +39,8 @@ class BanquetBookingsReportScreen extends StatelessWidget {
 
             final docs = snapshot.data!.docs;
             final entries = docs
-                .map((doc) => MapEntry(doc.id, BanquetBooking.fromMap(doc.data())))
+                .map((doc) =>
+                    MapEntry(doc.id, BanquetBooking.fromMap(doc.data())))
                 .toList();
 
             final drafts = entries.where((e) => e.value.isDraft).toList();
@@ -57,7 +58,8 @@ class BanquetBookingsReportScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildList(BuildContext context, List<MapEntry<String, BanquetBooking>> list) {
+  Widget _buildList(
+      BuildContext context, List<MapEntry<String, BanquetBooking>> list) {
     if (list.isEmpty) {
       return Center(child: Text('No bookings found'));
     }
@@ -84,6 +86,7 @@ class BanquetBookingsReportScreen extends StatelessWidget {
                     builder: (_) => EditBookingPage(
                       booking: booking,
                       docId: docId,
+                      branchId: context.read<UserProvider>().currentBranchId,
                     ),
                   ),
                 );

@@ -12,6 +12,11 @@ class AppUser {
   final bool queueReportsEnabled;
   // --- NEW: Permission for the corporate admin display screen ---
   final bool adminDisplayEnabled;
+  // --- NEW: Admin and Banquet Setup Permissions ---
+  final bool banquetSetupEnabled;
+  final bool userManagementEnabled;
+  final bool menuManagementEnabled;
+  final bool branchManagementEnabled;
 
   AppUser({
     required this.username,
@@ -25,6 +30,11 @@ class AppUser {
     this.queueReportsEnabled = false,
     // --- NEW: Added to constructor with a default of false ---
     this.adminDisplayEnabled = false,
+    // --- NEW: Add to constructor ---
+    this.banquetSetupEnabled = false,
+    this.userManagementEnabled = false,
+    this.menuManagementEnabled = false,
+    this.branchManagementEnabled = false,
   });
 
   bool get isAdmin => username.toLowerCase() == 'admin';
@@ -42,6 +52,11 @@ class AppUser {
       'queueReportsEnabled': queueReportsEnabled,
       // --- NEW: Added to the map for saving to Firestore ---
       'adminDisplayEnabled': adminDisplayEnabled,
+      // --- NEW: Add to map ---
+      'banquetSetupEnabled': banquetSetupEnabled,
+      'userManagementEnabled': userManagementEnabled,
+      'menuManagementEnabled': menuManagementEnabled,
+      'branchManagementEnabled': branchManagementEnabled,
     };
   }
 
@@ -58,6 +73,11 @@ class AppUser {
       queueReportsEnabled: map['queueReportsEnabled'] ?? false,
       // --- NEW: Reads the new permission from Firestore ---
       adminDisplayEnabled: map['adminDisplayEnabled'] ?? false,
+      // --- NEW: Read from map ---
+      banquetSetupEnabled: map['banquetSetupEnabled'] ?? false,
+      userManagementEnabled: map['userManagementEnabled'] ?? false,
+      menuManagementEnabled: map['menuManagementEnabled'] ?? false,
+      branchManagementEnabled: map['branchManagementEnabled'] ?? false,
     );
   }
 }

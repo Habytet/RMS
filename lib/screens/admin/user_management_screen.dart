@@ -58,7 +58,8 @@ class ExistingUsersList extends StatelessWidget {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: query.snapshots() as Stream<QuerySnapshot<Map<String, dynamic>>>,
       builder: (context, snapshot) {
-        if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
+        if (snapshot.hasError)
+          return Center(child: Text('Error: ${snapshot.error}'));
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -80,7 +81,8 @@ class ExistingUsersList extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => EditUserScreen(userId: doc.id, user: user),
+                      builder: (_) =>
+                          EditUserScreen(userId: doc.id, user: user),
                     ),
                   );
                 },
@@ -107,9 +109,17 @@ class _CreateUserFormState extends State<CreateUserForm> {
   String? _selectedBranchId;
   bool _isLoading = false;
   Map<String, bool> _roles = {
-    'podiumEnabled': false, 'waiterEnabled': false, 'customerEnabled': false,
-    'banquetBookingEnabled': false, 'banquetReportsEnabled': false, 'queueReportsEnabled': false,
+    'podiumEnabled': false,
+    'waiterEnabled': false,
+    'customerEnabled': false,
+    'banquetBookingEnabled': false,
+    'banquetReportsEnabled': false,
+    'queueReportsEnabled': false,
     'adminDisplayEnabled': false,
+    'banquetSetupEnabled': false,
+    'userManagementEnabled': false,
+    'menuManagementEnabled': false,
+    'branchManagementEnabled': false,
   };
 
   @override
@@ -125,16 +135,29 @@ class _CreateUserFormState extends State<CreateUserForm> {
     final email = _emailController.text.trim();
     final username = email.split('@').first;
     final profile = AppUser(
-      username: username, email: email, branchId: _selectedBranchId!,
-      podiumEnabled: _roles['podiumEnabled']!, waiterEnabled: _roles['waiterEnabled']!,
-      customerEnabled: _roles['customerEnabled']!, banquetBookingEnabled: _roles['banquetBookingEnabled']!,
-      banquetReportsEnabled: _roles['banquetReportsEnabled']!, queueReportsEnabled: _roles['queueReportsEnabled']!,
+      username: username,
+      email: email,
+      branchId: _selectedBranchId!,
+      podiumEnabled: _roles['podiumEnabled']!,
+      waiterEnabled: _roles['waiterEnabled']!,
+      customerEnabled: _roles['customerEnabled']!,
+      banquetBookingEnabled: _roles['banquetBookingEnabled']!,
+      banquetReportsEnabled: _roles['banquetReportsEnabled']!,
+      queueReportsEnabled: _roles['queueReportsEnabled']!,
       adminDisplayEnabled: _roles['adminDisplayEnabled']!,
+      banquetSetupEnabled: _roles['banquetSetupEnabled']!,
+      userManagementEnabled: _roles['userManagementEnabled']!,
+      menuManagementEnabled: _roles['menuManagementEnabled']!,
+      branchManagementEnabled: _roles['branchManagementEnabled']!,
     );
     try {
-      await context.read<UserProvider>().addUser(email, _passwordController.text.trim(), profile);
-      if(mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('User created successfully!'), backgroundColor: Colors.green));
+      await context
+          .read<UserProvider>()
+          .addUser(email, _passwordController.text.trim(), profile);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('User created successfully!'),
+            backgroundColor: Colors.green));
         _formKey.currentState!.reset();
         _emailController.clear();
         _passwordController.clear();
@@ -143,10 +166,12 @@ class _CreateUserFormState extends State<CreateUserForm> {
           _roles.updateAll((key, value) => false);
         });
       }
-    } on FirebaseAuthException catch(e) {
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.message}'), backgroundColor: Colors.red));
+    } on FirebaseAuthException catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Error: ${e.message}'), backgroundColor: Colors.red));
     } finally {
-      if(mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -158,10 +183,40 @@ class _CreateUserFormState extends State<CreateUserForm> {
     final isLoadingBranches = userProvider.isLoadingBranches;
 
     final List<DropdownMenuItem<String>> branchItems = [
-      const DropdownMenuItem(value: 'all', child: Text('All Branches (Corporate)')),
-      ...branches
-          .where((branch) => branch.id != 'all')
-          .map((branch) => DropdownMenuItem(value: branch.id, child: Text(branch.name))),
+      const DropdownMenuItem(
+          value: 'all', child: Text('All Branches (Corporate)')),
+      ...branches.where((branch) => branch.id != 'all').map((branch) =>
+          DropdownMenuItem(value: branch.id, child: Text(branch.name))),
+    ];
+
+    // --- NEW: Group permissions for better UI ---
+    final List<Map<String, dynamic>> permissionGroups = [
+      {
+        'title': 'Queue & Podium',
+        'keys': [
+          'podiumEnabled',
+          'waiterEnabled',
+          'customerEnabled',
+          'queueReportsEnabled',
+          'adminDisplayEnabled'
+        ],
+      },
+      {
+        'title': 'Banquet',
+        'keys': [
+          'banquetBookingEnabled',
+          'banquetReportsEnabled',
+          'banquetSetupEnabled'
+        ],
+      },
+      {
+        'title': 'Admin',
+        'keys': [
+          'userManagementEnabled',
+          'menuManagementEnabled',
+          'branchManagementEnabled'
+        ],
+      },
     ];
 
     return Form(
@@ -169,13 +224,26 @@ class _CreateUserFormState extends State<CreateUserForm> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          TextFormField(controller: _emailController, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email'), validator: (v) => v!.isEmpty ? 'Please enter an email' : null),
-          TextFormField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'Password'), validator: (v) => v!.length < 6 ? 'Password must be at least 6 characters' : null),
+          TextFormField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(labelText: 'Email'),
+              validator: (v) => v!.isEmpty ? 'Please enter an email' : null),
+          TextFormField(
+              controller: _passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Password'),
+              validator: (v) => v!.length < 6
+                  ? 'Password must be at least 6 characters'
+                  : null),
           const SizedBox(height: 16),
 
           // FIX: Show a loading indicator if branches are loading, otherwise show the dropdown
           if (isLoadingBranches)
-            const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 20.0), child: CircularProgressIndicator()))
+            const Center(
+                child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20.0),
+                    child: CircularProgressIndicator()))
           else
             DropdownButtonFormField<String>(
               value: _selectedBranchId,
@@ -183,16 +251,46 @@ class _CreateUserFormState extends State<CreateUserForm> {
               decoration: const InputDecoration(border: OutlineInputBorder()),
               items: branchItems,
               onChanged: (value) => setState(() => _selectedBranchId = value),
-              validator: (value) => value == null ? 'Please select a branch' : null,
+              validator: (value) =>
+                  value == null ? 'Please select a branch' : null,
             ),
 
           const SizedBox(height: 20),
-          const Text('User Roles & Permissions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ..._roles.keys.map((key) => SwitchListTile(title: Text(key.replaceAll('Enabled', '')), value: _roles[key]!, onChanged: (v) => setState(() => _roles[key] = v))).toList(),
+          const Text('User Roles & Permissions',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          // --- NEW: Grouped switches for permissions ---
+          ...permissionGroups.expand((group) => [
+                Padding(
+                  padding: const EdgeInsets.only(top: 16, bottom: 4),
+                  child: Text(group['title'],
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                ...group['keys'].map<Widget>((key) => SwitchListTile(
+                      title: Text(key
+                          .replaceAll('Enabled', '')
+                          .replaceAllMapped(RegExp(r'([a-z])([A-Z])'),
+                              (m) => '${m[1]} ${m[2]}')
+                          .replaceAll('adminDisplay', 'Admin Display')
+                          .replaceAll('banquetSetup', 'Banquet Setup')
+                          .replaceAll('userManagement', 'User Management')
+                          .replaceAll('menuManagement', 'Menu Management')
+                          .replaceAll('branchManagement', 'Branch Management')
+                          .replaceAll('banquetBooking', 'Banquet Booking')
+                          .replaceAll('banquetReports', 'Banquet Reports')
+                          .replaceAll('queueReports', 'Queue Reports')
+                          .replaceAll('podium', 'Podium')
+                          .replaceAll('waiter', 'Waiter')
+                          .replaceAll('customer', 'Customer')),
+                      value: _roles[key]!,
+                      onChanged: (v) => setState(() => _roles[key] = v),
+                    )),
+              ]),
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: _isLoading ? null : _createUser,
-            child: _isLoading ? const CircularProgressIndicator() : const Text('Create User'),
+            child: _isLoading
+                ? const CircularProgressIndicator()
+                : const Text('Create User'),
           ),
         ],
       ),
@@ -220,32 +318,55 @@ class _EditUserScreenState extends State<EditUserScreen> {
     super.initState();
     _selectedBranchId = widget.user.branchId;
     _roles = {
-      'podiumEnabled': widget.user.podiumEnabled, 'waiterEnabled': widget.user.waiterEnabled,
-      'customerEnabled': widget.user.customerEnabled, 'banquetBookingEnabled': widget.user.banquetBookingEnabled,
-      'banquetReportsEnabled': widget.user.banquetReportsEnabled, 'queueReportsEnabled': widget.user.queueReportsEnabled,
+      'podiumEnabled': widget.user.podiumEnabled,
+      'waiterEnabled': widget.user.waiterEnabled,
+      'customerEnabled': widget.user.customerEnabled,
+      'banquetBookingEnabled': widget.user.banquetBookingEnabled,
+      'banquetReportsEnabled': widget.user.banquetReportsEnabled,
+      'queueReportsEnabled': widget.user.queueReportsEnabled,
       'adminDisplayEnabled': widget.user.adminDisplayEnabled,
+      'banquetSetupEnabled': widget.user.banquetSetupEnabled,
+      'userManagementEnabled': widget.user.userManagementEnabled,
+      'menuManagementEnabled': widget.user.menuManagementEnabled,
+      'branchManagementEnabled': widget.user.branchManagementEnabled,
     };
   }
 
   Future<void> _updateUser() async {
     setState(() => _isLoading = true);
     final updatedProfile = AppUser(
-      username: widget.user.username, email: widget.user.email, branchId: _selectedBranchId,
-      podiumEnabled: _roles['podiumEnabled']!, waiterEnabled: _roles['waiterEnabled']!,
-      customerEnabled: _roles['customerEnabled']!, banquetBookingEnabled: _roles['banquetBookingEnabled']!,
-      banquetReportsEnabled: _roles['banquetReportsEnabled']!, queueReportsEnabled: _roles['queueReportsEnabled']!,
+      username: widget.user.username,
+      email: widget.user.email,
+      branchId: _selectedBranchId,
+      podiumEnabled: _roles['podiumEnabled']!,
+      waiterEnabled: _roles['waiterEnabled']!,
+      customerEnabled: _roles['customerEnabled']!,
+      banquetBookingEnabled: _roles['banquetBookingEnabled']!,
+      banquetReportsEnabled: _roles['banquetReportsEnabled']!,
+      queueReportsEnabled: _roles['queueReportsEnabled']!,
       adminDisplayEnabled: _roles['adminDisplayEnabled']!,
+      banquetSetupEnabled: _roles['banquetSetupEnabled']!,
+      userManagementEnabled: _roles['userManagementEnabled']!,
+      menuManagementEnabled: _roles['menuManagementEnabled']!,
+      branchManagementEnabled: _roles['branchManagementEnabled']!,
     );
     try {
-      await context.read<UserProvider>().updateUser(widget.userId, updatedProfile);
-      if(mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('User updated successfully!'), backgroundColor: Colors.green));
+      await context
+          .read<UserProvider>()
+          .updateUser(widget.userId, updatedProfile);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('User updated successfully!'),
+            backgroundColor: Colors.green));
         Navigator.pop(context);
       }
-    } catch(e) {
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error updating user: $e'), backgroundColor: Colors.red));
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Error updating user: $e'),
+            backgroundColor: Colors.red));
     } finally {
-      if(mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -254,10 +375,16 @@ class _EditUserScreenState extends State<EditUserScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete User?'),
-        content: Text('Are you sure you want to delete ${widget.user.email}? This action cannot be undone.'),
+        content: Text(
+            'Are you sure you want to delete ${widget.user.email}? This action cannot be undone.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete'), style: TextButton.styleFrom(foregroundColor: Colors.red)),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete'),
+              style: TextButton.styleFrom(foregroundColor: Colors.red)),
         ],
       ),
     );
@@ -265,14 +392,19 @@ class _EditUserScreenState extends State<EditUserScreen> {
     setState(() => _isLoading = true);
     try {
       await context.read<UserProvider>().deleteUser(widget.userId);
-      if(mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('User profile deleted.'), backgroundColor: Colors.green));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('User profile deleted.'),
+            backgroundColor: Colors.green));
         Navigator.of(context).pop();
       }
-    } catch(e) {
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red));
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red));
     } finally {
-      if(mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -284,10 +416,40 @@ class _EditUserScreenState extends State<EditUserScreen> {
     final isLoadingBranches = userProvider.isLoadingBranches;
 
     final List<DropdownMenuItem<String>> branchItems = [
-      const DropdownMenuItem(value: 'all', child: Text('All Branches (Corporate)')),
-      ...branches
-          .where((branch) => branch.id != 'all')
-          .map((branch) => DropdownMenuItem(value: branch.id, child: Text(branch.name))),
+      const DropdownMenuItem(
+          value: 'all', child: Text('All Branches (Corporate)')),
+      ...branches.where((branch) => branch.id != 'all').map((branch) =>
+          DropdownMenuItem(value: branch.id, child: Text(branch.name))),
+    ];
+
+    // --- NEW: Group permissions for better UI ---
+    final List<Map<String, dynamic>> permissionGroups = [
+      {
+        'title': 'Queue & Podium',
+        'keys': [
+          'podiumEnabled',
+          'waiterEnabled',
+          'customerEnabled',
+          'queueReportsEnabled',
+          'adminDisplayEnabled'
+        ],
+      },
+      {
+        'title': 'Banquet',
+        'keys': [
+          'banquetBookingEnabled',
+          'banquetReportsEnabled',
+          'banquetSetupEnabled'
+        ],
+      },
+      {
+        'title': 'Admin',
+        'keys': [
+          'userManagementEnabled',
+          'menuManagementEnabled',
+          'branchManagementEnabled'
+        ],
+      },
     ];
 
     return Scaffold(
@@ -295,36 +457,71 @@ class _EditUserScreenState extends State<EditUserScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          const Text('Assign to Branch', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Assign to Branch',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
 
           // FIX: Show a loading indicator if branches are loading, otherwise show the dropdown
           if (isLoadingBranches)
-            const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 20.0), child: CircularProgressIndicator()))
+            const Center(
+                child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20.0),
+                    child: CircularProgressIndicator()))
           else
             DropdownButtonFormField<String>(
               value: _selectedBranchId,
               items: branchItems,
               onChanged: (value) {
-                if(value != null) setState(() => _selectedBranchId = value);
+                if (value != null) setState(() => _selectedBranchId = value);
               },
               decoration: const InputDecoration(border: OutlineInputBorder()),
             ),
 
           const SizedBox(height: 24),
-          const Text('Permissions', style: TextStyle(fontWeight: FontWeight.bold)),
-          ..._roles.keys.map((key) => SwitchListTile(title: Text(key.replaceAll('Enabled', '')), value: _roles[key]!, onChanged: (v) => setState(() => _roles[key] = v))).toList(),
+          const Text('Permissions',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          // --- NEW: Grouped switches for permissions ---
+          ...permissionGroups.expand((group) => [
+                Padding(
+                  padding: const EdgeInsets.only(top: 16, bottom: 4),
+                  child: Text(group['title'],
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                ...group['keys'].map<Widget>((key) => SwitchListTile(
+                      title: Text(key
+                          .replaceAll('Enabled', '')
+                          .replaceAllMapped(RegExp(r'([a-z])([A-Z])'),
+                              (m) => '${m[1]} ${m[2]}')
+                          .replaceAll('adminDisplay', 'Admin Display')
+                          .replaceAll('banquetSetup', 'Banquet Setup')
+                          .replaceAll('userManagement', 'User Management')
+                          .replaceAll('menuManagement', 'Menu Management')
+                          .replaceAll('branchManagement', 'Branch Management')
+                          .replaceAll('banquetBooking', 'Banquet Booking')
+                          .replaceAll('banquetReports', 'Banquet Reports')
+                          .replaceAll('queueReports', 'Queue Reports')
+                          .replaceAll('podium', 'Podium')
+                          .replaceAll('waiter', 'Waiter')
+                          .replaceAll('customer', 'Customer')),
+                      value: _roles[key]!,
+                      onChanged: (v) => setState(() => _roles[key] = v),
+                    )),
+              ]),
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: _isLoading ? null : _updateUser,
-            child: _isLoading ? const CircularProgressIndicator() : const Text('Save Changes'),
+            child: _isLoading
+                ? const CircularProgressIndicator()
+                : const Text('Save Changes'),
           ),
           const Divider(height: 40, color: Colors.grey),
           ElevatedButton.icon(
             icon: const Icon(Icons.delete_forever),
             label: const Text('Delete User'),
             onPressed: _isLoading ? null : _deleteUser,
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade700,
+                foregroundColor: Colors.white),
           )
         ],
       ),

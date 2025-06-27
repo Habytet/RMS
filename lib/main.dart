@@ -92,6 +92,7 @@ class MyApp extends StatelessWidget {
               builder: (_) => EditBookingPage(
                 booking: args['booking'],
                 docId: args['docId'],
+                branchId: args['branchId'],
               ),
             );
           case '/banquet/select_items':
@@ -100,6 +101,8 @@ class MyApp extends StatelessWidget {
               builder: (_) => SelectMenuItemsPage(
                 menu: args['menu'],
                 initialSelections: args['initialSelections'],
+                branchId: args['branchId'],
+                hallName: args['hallName'],
               ),
             );
           default:

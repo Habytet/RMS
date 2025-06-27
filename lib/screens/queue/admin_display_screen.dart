@@ -37,7 +37,6 @@ class _AdminDisplayScreenState extends State<AdminDisplayScreen> {
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: DropdownButtonFormField<String>(
-              // *** THE FIX IS ON THIS LINE: Removed the extra underscore ***
               value: _selectedBranchFilter,
               decoration: const InputDecoration(
                 labelText: 'Filter by Branch',
@@ -74,6 +73,19 @@ class _AdminDisplayScreenState extends State<AdminDisplayScreen> {
               itemCount: filteredQueue.length,
               itemBuilder: (context, index) {
                 final customer = filteredQueue[index];
+
+                // --- THIS IS THE FIX ---
+                // 1. Get the Branch ID from the customer data.
+                final String branchId = customer.branchName ?? '';
+
+                // 2. Look up the Branch Name from the full list of branches.
+                // Provides a fallback text if the branch isn't found.
+                final branchName = allBranches
+                    .firstWhere((branch) => branch.id == branchId,
+                    orElse: () => Branch(id: '', name: 'Unknown'))
+                    .name;
+                // --- END OF FIX ---
+
                 return Card(
                   margin: const EdgeInsets.symmetric(
                       horizontal: 12, vertical: 6),
@@ -87,8 +99,9 @@ class _AdminDisplayScreenState extends State<AdminDisplayScreen> {
                       'Token: ${customer.token} | Phone: ${customer.phone}',
                     ),
                     trailing: Chip(
+                      // 3. Use the resolved branch name here.
                       label: Text(
-                        customer.branchName ?? 'Unknown',
+                        branchName,
                         style: const TextStyle(color: Colors.white),
                       ),
                       backgroundColor: Colors.blueGrey,

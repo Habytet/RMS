@@ -13,11 +13,13 @@ import 'banquet_calendar_screen.dart';
 
 class EditBookingPage extends StatefulWidget {
   final BanquetBooking booking;
-  final String docId;          // ← add this
+  final String docId;
+  final String branchId;
 
   const EditBookingPage({
     required this.booking,
-    required this.docId,        // ← add here
+    required this.docId,
+    required this.branchId,
   });
 
   @override
@@ -43,7 +45,8 @@ class _EditBookingPageState extends State<EditBookingPage> {
     _nameController = TextEditingController(text: widget.booking.customerName);
     _phoneController = TextEditingController(text: widget.booking.phone);
     _paxController = TextEditingController(text: widget.booking.pax.toString());
-    _advanceController = TextEditingController(text: widget.booking.amount.toString());
+    _advanceController =
+        TextEditingController(text: widget.booking.amount.toString());
     _commentsController = TextEditingController(text: widget.booking.comments);
     _totalAmount = widget.booking.totalAmount;
     _remainingAmount = widget.booking.remainingAmount;
@@ -64,7 +67,8 @@ class _EditBookingPageState extends State<EditBookingPage> {
   Tuple2<Menu?, Map<String, Set<String>>> _parseMenu(String raw) {
     final menus = Hive.box<Menu>('menus').values.toList();
     final menuName = raw.split('\n').first;
-    final menu = menus.firstWhere((m) => m.name == menuName, orElse: () => Menu(name: '', price: 0));
+    final menu = menus.firstWhere((m) => m.name == menuName,
+        orElse: () => Menu(name: '', price: 0));
 
     final selections = <String, Set<String>>{};
     raw.split('\n').skip(1).forEach((line) {
@@ -84,18 +88,22 @@ class _EditBookingPageState extends State<EditBookingPage> {
       ..customerName = _nameController.text.trim()
       ..phone = _phoneController.text.trim()
       ..pax = int.tryParse(_paxController.text.trim()) ?? widget.booking.pax
-      ..amount = double.tryParse(_advanceController.text.trim()) ?? widget.booking.amount
+      ..amount = double.tryParse(_advanceController.text.trim()) ??
+          widget.booking.amount
       ..totalAmount = _totalAmount
       ..remainingAmount = _remainingAmount
       ..comments = _commentsController.text.trim()
       ..callbackTime = _callbackTime
       ..menu = _selectedMenu!.name +
-          _selectedItems.entries.map((e) => '\n${e.key}: ${e.value.join(", ")}').join();
+          _selectedItems.entries
+              .map((e) => '\n${e.key}: ${e.value.join(", ")}')
+              .join();
 
     context.read<BanquetProvider>().updateBooking(
-      widget.docId,           // ← pass the doc ID
-      updated,
-    );    Navigator.pop(context);
+          widget.docId, // ← pass the doc ID
+          updated,
+        );
+    Navigator.pop(context);
   }
 
   @override
@@ -108,7 +116,8 @@ class _EditBookingPageState extends State<EditBookingPage> {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
-            Text('Date: ${DateFormat('yyyy-MM-dd').format(widget.booking.date)}'),
+            Text(
+                'Date: ${DateFormat('yyyy-MM-dd').format(widget.booking.date)}'),
             Text('Hall: ${widget.booking.hallName}'),
             Text('Slot: ${widget.booking.slotLabel}'),
             ElevatedButton.icon(
@@ -118,7 +127,8 @@ class _EditBookingPageState extends State<EditBookingPage> {
                 final result = await Navigator.push<Map<String, dynamic>>(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => BanquetCalendarScreen(initialDate: widget.booking.date),
+                    builder: (_) =>
+                        BanquetCalendarScreen(initialDate: widget.booking.date),
                   ),
                 );
                 if (result != null) {
@@ -131,8 +141,12 @@ class _EditBookingPageState extends State<EditBookingPage> {
               },
             ),
             SizedBox(height: 12),
-            TextField(controller: _nameController, decoration: InputDecoration(labelText: 'Customer Name')),
-            TextField(controller: _phoneController, decoration: InputDecoration(labelText: 'Phone')),
+            TextField(
+                controller: _nameController,
+                decoration: InputDecoration(labelText: 'Customer Name')),
+            TextField(
+                controller: _phoneController,
+                decoration: InputDecoration(labelText: 'Phone')),
             TextField(
               controller: _paxController,
               decoration: InputDecoration(labelText: 'PAX'),
@@ -150,16 +164,20 @@ class _EditBookingPageState extends State<EditBookingPage> {
               onChanged: (val) {
                 setState(() {
                   _totalAmount = double.tryParse(val.trim()) ?? 0.0;
-                  _remainingAmount = _totalAmount - (double.tryParse(_advanceController.text.trim()) ?? 0);
+                  _remainingAmount = _totalAmount -
+                      (double.tryParse(_advanceController.text.trim()) ?? 0);
                 });
               },
-              controller: TextEditingController(text: _totalAmount.toStringAsFixed(2)),
+              controller:
+                  TextEditingController(text: _totalAmount.toStringAsFixed(2)),
             ),
             SizedBox(height: 8),
-            Text('Remaining Amount: ₹$_remainingAmount', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('Remaining Amount: ₹$_remainingAmount',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             SizedBox(height: 12),
-            TextField(controller: _commentsController, decoration: InputDecoration(labelText: 'Comments')),
-
+            TextField(
+                controller: _commentsController,
+                decoration: InputDecoration(labelText: 'Comments')),
             ListTile(
               title: Text(_callbackTime == null
                   ? 'Select Callback Time'
@@ -179,14 +197,13 @@ class _EditBookingPageState extends State<EditBookingPage> {
                   );
                   if (time != null) {
                     setState(() {
-                      _callbackTime = DateTime(
-                          picked.year, picked.month, picked.day, time.hour, time.minute);
+                      _callbackTime = DateTime(picked.year, picked.month,
+                          picked.day, time.hour, time.minute);
                     });
                   }
                 }
               },
             ),
-
             if (menus.isNotEmpty) ...[
               DropdownButton<Menu>(
                 value: _selectedMenu,
@@ -210,12 +227,15 @@ class _EditBookingPageState extends State<EditBookingPage> {
                   icon: Icon(Icons.edit),
                   label: Text('Edit Menu Selections'),
                   onPressed: () async {
-                    final updated = await Navigator.push<Map<String, Set<String>>>(
+                    final updated =
+                        await Navigator.push<Map<String, Set<String>>>(
                       context,
                       MaterialPageRoute(
                         builder: (_) => SelectMenuItemsPage(
                           menu: _selectedMenu!,
                           initialSelections: _selectedItems,
+                          branchId: widget.branchId,
+                          hallName: widget.booking.hallName,
                         ),
                       ),
                     );
@@ -234,7 +254,6 @@ class _EditBookingPageState extends State<EditBookingPage> {
                   style: TextStyle(color: Colors.redAccent),
                 ),
               ),
-
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: _saveChanges,
