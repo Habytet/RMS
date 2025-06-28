@@ -1,111 +1,133 @@
-import 'dart:io';
-import 'screens/admin/queue_reports_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
-// Models
-import 'models/customer.dart';
-import 'models/app_user.dart';
-import 'models/hall.dart';
-import 'models/slot.dart';
-import 'models/banquet_booking.dart';
-import 'models/menu.dart';
-import 'models/menu_category.dart';
-import 'models/menu_item.dart';
-
-// Providers
-import 'providers/token_provider.dart';
 import 'providers/user_provider.dart';
+import 'providers/token_provider.dart';
 import 'providers/banquet_provider.dart';
 
-// Screens
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/admin/user_management_screen.dart';
 import 'screens/admin/menu_management_screen.dart';
-import 'screens/admin/reports_screen.dart';
-import 'screens/admin/combined_reports_screen.dart';
+import 'screens/admin/branch_management_screen.dart';
+import 'screens/admin/queue_reports_screen.dart';
+import 'screens/queue/admin_display_screen.dart';
 import 'screens/podium_operator_screen.dart';
-import 'screens/waiter_screen.dart';
+import 'screens/waiter_table_screen.dart';
 import 'screens/customer_screen.dart';
 import 'screens/banquet/banquet_calendar_screen.dart';
 import 'screens/banquet/hall_slot_management_screen.dart';
 import 'screens/banquet/banquet_bookings_report_screen.dart';
-import 'screens/banquet/booking_page.dart';
+import 'screens/banquet/edit_booking_page.dart';
+import 'screens/banquet/select_menu_items_page.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Hive.initFlutter();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
-  Hive.registerAdapter(CustomerAdapter());
-  Hive.registerAdapter(AppUserAdapter());
-  Hive.registerAdapter(HallAdapter());
-  Hive.registerAdapter(SlotAdapter());
-  Hive.registerAdapter(BanquetBookingAdapter());
-  Hive.registerAdapter(MenuAdapter());
-  Hive.registerAdapter(MenuCategoryAdapter());
-  Hive.registerAdapter(MenuItemAdapter());
+  // In lib/main.dart
 
-  await Hive.openBox<Customer>('customerQueue');
-  await Hive.openBox<int>('settings');
-  await Hive.openBox<AppUser>('users');
-  await Hive.openBox<Customer>('completedQueue');
-  await Hive.openBox<Hall>('halls');
-  await Hive.openBox<Slot>('slots');
-  await Hive.openBox<BanquetBooking>('banquetBookings');
-  await Hive.openBox<Menu>('menus');
-  await Hive.openBox<MenuCategory>('menuCategories');
-  await Hive.openBox<MenuItem>('menuItems');
+// ... (keep your existing imports)
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => TokenProvider()..loadData()),
-        ChangeNotifierProvider(create: (_) => UserProvider()..loadInitialUsers()),
-        ChangeNotifierProvider(create: (_) => BanquetProvider()),
+        // UserProvider is the source of truth for auth and user profile
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+
+        // These ProxyProviders depend on UserProvider.
+        // They will automatically update when the logged-in user or branch changes.
+        ChangeNotifierProxyProvider<UserProvider, TokenProvider>(
+          create: (_) => TokenProvider(branchId: 'all'), // Initial provider
+          update: (_, userProvider, previousTokenProvider) => TokenProvider(
+            branchId: userProvider.currentBranchId,
+          ),
+        ),
+
+        ChangeNotifierProxyProvider<UserProvider, BanquetProvider>(
+          create: (_) => BanquetProvider(branchId: 'all'), // Initial provider
+          update: (_, userProvider, previousBanquetProvider) => BanquetProvider(
+            branchId: userProvider.currentBranchId,
+          ),
+        ),
       ],
-      child: MyApp(),
+      child: const MyApp(),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Token Management App',
+      title: 'Token & Banquet Manager',
       theme: ThemeData(primarySwatch: Colors.blue),
-      initialRoute: '/',
+      home: const AuthWrapper(),
       routes: {
-        '/': (_) => LoginScreen(),
+        '/login': (_) => const LoginScreen(),
         '/dashboard': (_) => DashboardScreen(),
-        '/admin/users': (_) => UserManagementScreen(),
+        '/admin/users': (_) => const UserManagementScreen(),
         '/admin/menus': (_) => MenuManagementScreen(),
-        '/admin/combined_reports': (_) => CombinedReportsScreen(),
-        '/admin/reports': (_) => ReportsScreen(),
-        '/reports/queue': (_) => QueueReportsScreen(),
+        '/admin/branches': (_) => const BranchManagementScreen(),
+        '/admin/queue_reports': (_) => const QueueReportsScreen(),
+        '/queue/admin_display': (_) => const AdminDisplayScreen(),
         '/podium': (_) => PodiumOperatorScreen(),
-        '/waiter': (_) => WaiterScreen(),
+        '/waiter': (_) => WaiterTableScreen(),
         '/customer': (_) => CustomerScreen(),
-        '/banquet': (_) => BanquetCalendarScreen(),
+        '/banquet': (_) => const BanquetCalendarScreen(),
         '/banquet/setup': (_) => HallSlotManagementScreen(),
         '/banquet/bookings': (_) => BanquetBookingsReportScreen(),
       },
       onGenerateRoute: (settings) {
-        if (settings.name == '/banquet/book') {
-          final args = settings.arguments as Map<String, dynamic>;
-          return MaterialPageRoute(
-            builder: (_) => BookingPage(
-              date: args['date'],
-              hallName: args['hallName'],
-              slotLabel: args['slotLabel'],
-            ),
-          );
+        switch (settings.name) {
+          case '/banquet/edit':
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder: (_) => EditBookingPage(
+                booking: args['booking'],
+                docId: args['docId'],
+                branchId: args['branchId'],
+              ),
+            );
+          case '/banquet/select_items':
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder: (_) => SelectMenuItemsPage(
+                menu: args['menu'],
+                initialSelections: args['initialSelections'],
+                branchId: args['branchId'],
+                hallName: args['hallName'],
+              ),
+            );
+          default:
+            return null;
         }
-        return null;
       },
     );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final authStatus = context.watch<UserProvider>().authStatus;
+    switch (authStatus) {
+      case AuthStatus.authenticated:
+        return DashboardScreen();
+      case AuthStatus.unauthenticated:
+        return const LoginScreen();
+      case AuthStatus.unknown:
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        );
+    }
   }
 }

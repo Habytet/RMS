@@ -1,32 +1,22 @@
-import 'package:hive/hive.dart';
+// lib/models/customer.dart
 
-part 'customer.g.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-@HiveType(typeId: 0)
-class Customer extends HiveObject {
-  @HiveField(0)
+class Customer {
   int token;
-
-  @HiveField(1)
   String name;
-
-  @HiveField(2)
   String phone;
-
-  @HiveField(3)
   int pax;
-
-  @HiveField(4)
   DateTime registeredAt;
-
-  @HiveField(5)
   DateTime? calledAt;
-
-  @HiveField(6)
   int children;
+  String? operator;
+  String? waiterName;
+  bool isCalled;
 
-  @HiveField(7)
-  String? operator; // NEW FIELD
+  // --- NEW: A field to hold the branch name for display purposes ---
+  // This field is NOT saved to Firestore, it's assigned at runtime by the provider.
+  String? branchName;
 
   Customer({
     required this.token,
@@ -37,5 +27,40 @@ class Customer extends HiveObject {
     this.calledAt,
     this.children = 0,
     this.operator,
+    this.waiterName,
+    this.isCalled = false,
+    this.branchName, // --- ADDED to constructor ---
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'token': token,
+      'name': name,
+      'phone': phone,
+      'pax': pax,
+      'registeredAt': registeredAt,
+      'calledAt': calledAt,
+      'children': children,
+      'operator': operator,
+      'waiterName': waiterName,
+      'isCalled': isCalled,
+      // We don't save branchName here because it's derived from the document's location
+    };
+  }
+
+  factory Customer.fromMap(Map<String, dynamic> map) {
+    return Customer(
+      token: map['token'] ?? 0,
+      name: map['name'] ?? '',
+      phone: map['phone'] ?? '',
+      pax: map['pax'] ?? 0,
+      registeredAt: (map['registeredAt'] as Timestamp).toDate(),
+      calledAt: map['calledAt'] != null ? (map['calledAt'] as Timestamp).toDate() : null,
+      children: map['children'] ?? 0,
+      operator: map['operator'],
+      waiterName: map['waiterName'],
+      isCalled: map['isCalled'] ?? false,
+      // branchName is assigned later by the provider, not read from the map
+    );
+  }
 }

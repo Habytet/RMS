@@ -1,46 +1,22 @@
-import 'package:hive/hive.dart';
+// lib/models/banquet_booking.dart
 
-part 'banquet_booking.g.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-@HiveType(typeId: 4)
-class BanquetBooking extends HiveObject {
-  @HiveField(0)
+// All Hive-related code has been removed.
+
+class BanquetBooking { // No longer extends HiveObject
   DateTime date;
-
-  @HiveField(1)
   String hallName;
-
-  @HiveField(2)
   String slotLabel;
-
-  @HiveField(3)
   String customerName;
-
-  @HiveField(4)
   String phone;
-
-  @HiveField(5)
   int pax;
-
-  @HiveField(6)
   double amount;
-
-  @HiveField(7)
   String menu;
-
-  @HiveField(8)
   double totalAmount;
-
-  @HiveField(9)
   double remainingAmount;
-
-  @HiveField(10)
   String comments;
-
-  @HiveField(11)
   DateTime? callbackTime;
-
-  @HiveField(12)
   bool isDraft;
 
   BanquetBooking({
@@ -58,4 +34,42 @@ class BanquetBooking extends HiveObject {
     this.callbackTime,
     required this.isDraft,
   });
+
+  /// Convert to Firestore map
+  Map<String, dynamic> toMap() {
+    return {
+      'date': Timestamp.fromDate(date),
+      'hallName': hallName,
+      'slotLabel': slotLabel,
+      'customerName': customerName,
+      'phone': phone,
+      'pax': pax,
+      'amount': amount,
+      'menu': menu,
+      'totalAmount': totalAmount,
+      'remainingAmount': remainingAmount,
+      'comments': comments,
+      'callbackTime': callbackTime != null ? Timestamp.fromDate(callbackTime!) : null,
+      'isDraft': isDraft,
+    };
+  }
+
+  /// Create from Firestore map
+  factory BanquetBooking.fromMap(Map<String, dynamic> map) {
+    return BanquetBooking(
+      date: (map['date'] as Timestamp).toDate(),
+      hallName: map['hallName'] ?? '',
+      slotLabel: map['slotLabel'] ?? '',
+      customerName: map['customerName'] ?? '',
+      phone: map['phone'] ?? '',
+      pax: map['pax'] ?? 0,
+      amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
+      menu: map['menu'] ?? '',
+      totalAmount: (map['totalAmount'] as num?)?.toDouble() ?? 0.0,
+      remainingAmount: (map['remainingAmount'] as num?)?.toDouble() ?? 0.0,
+      comments: map['comments'] ?? '',
+      callbackTime: map['callbackTime'] != null ? (map['callbackTime'] as Timestamp).toDate() : null,
+      isDraft: map['isDraft'] ?? false,
+    );
+  }
 }

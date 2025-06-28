@@ -1,14 +1,28 @@
-import 'package:hive/hive.dart';
+// lib/models/slot.dart
 
-part 'slot.g.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-@HiveType(typeId: 3)
-class Slot extends HiveObject {
-  @HiveField(0)
+// All Hive-related code has been removed.
+
+class Slot { // No longer extends HiveObject
   String hallName;
-
-  @HiveField(1)
   String label;
 
   Slot({required this.hallName, required this.label});
+
+  /// Convert this Slot to a Firestore map
+  Map<String, dynamic> toMap() {
+    return {
+      'hallName': hallName,
+      'label': label,
+    };
+  }
+
+  /// Create a Slot from Firestore data
+  factory Slot.fromMap(Map<String, dynamic> map) {
+    return Slot(
+      hallName: map['hallName'] ?? '',
+      label: map['label'] ?? '',
+    );
+  }
 }

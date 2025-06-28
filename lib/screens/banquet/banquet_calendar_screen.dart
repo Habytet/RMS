@@ -5,6 +5,8 @@ import 'package:table_calendar/table_calendar.dart';
 import '../../providers/banquet_provider.dart';
 import '../../models/hall.dart';
 import '../../models/slot.dart';
+import '../../providers/user_provider.dart';
+import '../../screens/banquet/booking_page.dart';
 
 class BanquetCalendarScreen extends StatefulWidget {
   final DateTime? initialDate;
@@ -18,6 +20,7 @@ class BanquetCalendarScreen extends StatefulWidget {
 class _BanquetCalendarScreenState extends State<BanquetCalendarScreen> {
   late DateTime _focusedDay;
   DateTime? _selectedDay;
+  String? _selectedBranchId;
 
   @override
   void initState() {
@@ -28,38 +31,94 @@ class _BanquetCalendarScreenState extends State<BanquetCalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<BanquetProvider>();
+    final userProvider = context.watch<UserProvider>();
+    final isAdmin = userProvider.currentUser?.isAdmin ?? false;
+    final branches = userProvider.branches;
 
-    return Scaffold(
-      appBar: AppBar(title: Text('Banquet Availability')),
-      body: TableCalendar(
-        firstDay: DateTime.utc(2023, 1, 1),
-        lastDay: DateTime.utc(2030, 12, 31),
-        focusedDay: _focusedDay,
-        selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-        onDaySelected: (selected, focused) {
+    // Set default branch for admin only once
+    if (isAdmin && _selectedBranchId == null && branches.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
           setState(() {
-            _selectedDay = selected;
-            _focusedDay = focused;
+            _selectedBranchId = branches
+                .firstWhere((b) => b.id != 'all', orElse: () => branches.first)
+                .id;
           });
-          _openAvailabilityPopup(context, selected);
-        },
-        calendarBuilders: CalendarBuilders(
-          defaultBuilder: (context, day, _) {
-            final isAvailable = _checkAnySlotAvailable(provider, day);
-            final borderColor = isAvailable ? Colors.green : Colors.red;
+        }
+      });
+    } else if (!isAdmin && _selectedBranchId == null) {
+      _selectedBranchId = userProvider.currentBranchId;
+    }
 
-            return Container(
-              margin: EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                border: Border.all(color: borderColor, width: 2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              alignment: Alignment.center,
-              child: Text('${day.day}'),
-            );
-          },
-        ),
+    if (_selectedBranchId == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return ChangeNotifierProvider<BanquetProvider>(
+      key: ValueKey(_selectedBranchId),
+      create: (_) => BanquetProvider(branchId: _selectedBranchId!),
+      child: Consumer<BanquetProvider>(
+        builder: (context, provider, _) {
+          return Scaffold(
+            appBar: AppBar(title: Text('Banquet Availability')),
+            body: Column(
+              children: [
+                if (isAdmin)
+                  Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedBranchId,
+                      decoration: const InputDecoration(
+                          labelText: 'Select Branch',
+                          border: OutlineInputBorder()),
+                      items: [
+                        ...branches.where((b) => b.id != 'all').map((b) =>
+                            DropdownMenuItem(value: b.id, child: Text(b.name))),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedBranchId = value;
+                        });
+                      },
+                    ),
+                  ),
+                Expanded(
+                  child: TableCalendar(
+                    firstDay: DateTime.utc(2023, 1, 1),
+                    lastDay: DateTime.utc(2030, 12, 31),
+                    focusedDay: _focusedDay,
+                    selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                    onDaySelected: (selected, focused) {
+                      setState(() {
+                        _selectedDay = selected;
+                        _focusedDay = focused;
+                      });
+                      _openAvailabilityPopup(context, selected, provider);
+                    },
+                    calendarBuilders: CalendarBuilders(
+                      defaultBuilder: (context, day, _) {
+                        final isAvailable =
+                            _checkAnySlotAvailable(provider, day);
+                        final borderColor =
+                            isAvailable ? Colors.green : Colors.red;
+
+                        return Container(
+                          margin: EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: borderColor, width: 2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text('${day.day}'),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -73,9 +132,8 @@ class _BanquetCalendarScreenState extends State<BanquetCalendarScreen> {
     return false;
   }
 
-  void _openAvailabilityPopup(BuildContext context, DateTime date) {
-    final provider = context.read<BanquetProvider>();
-
+  void _openAvailabilityPopup(
+      BuildContext context, DateTime date, BanquetProvider provider) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -92,26 +150,29 @@ class _BanquetCalendarScreenState extends State<BanquetCalendarScreen> {
             return ExpansionTile(
               title: Text(hall.name),
               children: slots.map((slot) {
-                final booked = provider.isSlotBooked(date, hall.name, slot.label);
+                final booked =
+                    provider.isSlotBooked(date, hall.name, slot.label);
                 return ListTile(
                   title: Text(slot.label),
                   trailing: booked
                       ? Text('Booked', style: TextStyle(color: Colors.red))
                       : ElevatedButton(
-                    child: Text('Select'),
-                    onPressed: () {
-                      Navigator.pop(context); // close popup
-                      Navigator.pushNamed(
-                        context,
-                        '/banquet/book',
-                        arguments: {
-                          'date': date,
-                          'hallName': hall.name,
-                          'slotLabel': slot.label,
-                        },
-                      );
-                    },
-                  ),
+                          child: Text('Select'),
+                          onPressed: () {
+                            Navigator.pop(context); // close popup
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => BookingPage(
+                                  date: date,
+                                  hallName: hall.name,
+                                  slotLabel: slot.label,
+                                  branchId: _selectedBranchId!,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                 );
               }).toList(),
             );

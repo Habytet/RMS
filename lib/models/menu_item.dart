@@ -1,15 +1,12 @@
-import 'package:hive/hive.dart';
-part 'menu_item.g.dart';
+// lib/models/menu_item.dart
 
-@HiveType(typeId: 12)
-class MenuItem extends HiveObject {
-  @HiveField(0)
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+// All Hive-related code has been removed.
+
+class MenuItem { // No longer extends HiveObject
   String menuName;
-
-  @HiveField(1)
   String categoryName;
-
-  @HiveField(2)
   String itemName;
 
   MenuItem({
@@ -17,4 +14,22 @@ class MenuItem extends HiveObject {
     required this.categoryName,
     required this.itemName,
   });
+
+  /// Convert this MenuItem to a Firestore map
+  Map<String, dynamic> toMap() {
+    return {
+      'menuName': menuName,
+      'categoryName': categoryName,
+      'itemName': itemName,
+    };
+  }
+
+  /// Create a MenuItem from Firestore data
+  factory MenuItem.fromMap(Map<String, dynamic> map) {
+    return MenuItem(
+      menuName: map['menuName'] ?? '',
+      categoryName: map['categoryName'] ?? '',
+      itemName: map['itemName'] ?? '',
+    );
+  }
 }
