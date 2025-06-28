@@ -22,6 +22,8 @@ import 'screens/banquet/hall_slot_management_screen.dart';
 import 'screens/banquet/banquet_bookings_report_screen.dart';
 import 'screens/banquet/edit_booking_page.dart';
 import 'screens/banquet/select_menu_items_page.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

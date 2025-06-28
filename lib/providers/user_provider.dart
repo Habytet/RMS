@@ -14,6 +14,7 @@ class UserProvider extends ChangeNotifier {
 
   AppUser? _currentUser;
   String _currentBranchId = 'all';
+  String? _currentUserId;
   List<Branch> _branches = [];
   bool _isLoadingBranches = true;
   AuthStatus _authStatus = AuthStatus.unknown;
@@ -26,6 +27,7 @@ class UserProvider extends ChangeNotifier {
   List<Branch> get branches => List.unmodifiable(_branches);
   bool get isLoadingBranches => _isLoadingBranches;
   AuthStatus get authStatus => _authStatus;
+  String? _fcmToken;
 
   UserProvider() {
     _authSubscription = _auth.authStateChanges().listen(_onAuthStateChanged);
@@ -41,6 +43,7 @@ class UserProvider extends ChangeNotifier {
       _currentBranchId = 'all';
       _authStatus = AuthStatus.unauthenticated;
     } else {
+      _currentUserId = user.uid;
       await _loadUserProfile(user);
       if (_currentUser != null) {
         _authStatus = AuthStatus.authenticated;
@@ -71,9 +74,11 @@ class UserProvider extends ChangeNotifier {
   void _listenToBranches() {
     _isLoadingBranches = true;
     notifyListeners();
-    _branchSubscription = _firestore.collection('branches').snapshots().listen((snapshot) {
+    _branchSubscription =
+        _firestore.collection('branches').snapshots().listen((snapshot) {
       _branches = snapshot.docs
-          .map((doc) => Branch.fromFirestore(doc.id, doc.data() as Map<String, dynamic>))
+          .map((doc) =>
+              Branch.fromFirestore(doc.id, doc.data() as Map<String, dynamic>))
           .toList();
       _isLoadingBranches = false;
       notifyListeners();
@@ -83,6 +88,14 @@ class UserProvider extends ChangeNotifier {
       _branches = [];
       notifyListeners();
     });
+  }
+
+  Future<void> saveFcm({required String token}) async {
+    _fcmToken = token;
+    await _firestore
+        .collection('users')
+        .doc(_currentUserId)
+        .update({'fcmToken': token});
   }
 
   // *** CRITICAL FIX: This function no longer logs the admin out. ***
@@ -96,11 +109,15 @@ class UserProvider extends ChangeNotifier {
     try {
       // Create the user with the temporary auth instance.
       // This does NOT affect the main app's logged-in admin.
-      UserCredential newUserCredential = await FirebaseAuth.instanceFor(app: tempApp)
-          .createUserWithEmailAndPassword(email: email, password: password);
+      UserCredential newUserCredential =
+          await FirebaseAuth.instanceFor(app: tempApp)
+              .createUserWithEmailAndPassword(email: email, password: password);
 
       // After creating the user, save their profile to Firestore using their new UID.
-      await _firestore.collection('users').doc(newUserCredential.user!.uid).set(profile.toMap());
+      await _firestore
+          .collection('users')
+          .doc(newUserCredential.user!.uid)
+          .set(profile.toMap());
     } finally {
       // Delete the temporary app instance to clean up resources.
       await tempApp.delete();
@@ -121,6 +138,7 @@ class UserProvider extends ChangeNotifier {
   }
 
   Future<void> updateUser(String uid, AppUser profile) async {
+    profile.fcmToken = _fcmToken;
     await _firestore.collection('users').doc(uid).update(profile.toMap());
   }
 
@@ -133,7 +151,10 @@ class UserProvider extends ChangeNotifier {
 
   Future<void> updateBranch(String branchId, String newName) async {
     if (newName.isEmpty) return;
-    await _firestore.collection('branches').doc(branchId).update({'name': newName});
+    await _firestore
+        .collection('branches')
+        .doc(branchId)
+        .update({'name': newName});
   }
 
   Future<void> deleteBranch(String branchId) async {

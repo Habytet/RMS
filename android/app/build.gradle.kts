@@ -3,12 +3,28 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services")
+
+}
+
+dependencies {
+    // Import the Firebase BoM
+    implementation(platform("com.google.firebase:firebase-bom:33.15.0"))
+
+
+    // TODO: Add the dependencies for Firebase products you want to use
+    // When using the BoM, don't specify versions in Firebase dependencies
+    implementation("com.google.firebase:firebase-analytics")
+
+
+    // Add the dependencies for any other desired Firebase products
+    // https://firebase.google.com/docs/android/setup#available-libraries
 }
 
 // Paste this entire block into your android/app/build.gradle.kts file
 
 android {
-    namespace = "com.example.token_manager"
+    namespace = "com.example.tokenmanagement"
     // It's best practice to use a recent compileSdk. 34 is current.
     compileSdk = 35
 
@@ -26,7 +42,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.token_manager"
+        applicationId = "com.example.tokenmanagement"
         // FIX #2: Increase minSdk to 23 as required by firebase-auth.
         minSdk = 23
         targetSdk = flutter.targetSdkVersion

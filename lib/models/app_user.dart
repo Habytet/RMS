@@ -17,25 +17,26 @@ class AppUser {
   final bool userManagementEnabled;
   final bool menuManagementEnabled;
   final bool branchManagementEnabled;
+  String? fcmToken;
 
-  AppUser({
-    required this.username,
-    required this.email,
-    required this.branchId,
-    this.podiumEnabled = false,
-    this.waiterEnabled = false,
-    this.customerEnabled = false,
-    this.banquetBookingEnabled = false,
-    this.banquetReportsEnabled = false,
-    this.queueReportsEnabled = false,
-    // --- NEW: Added to constructor with a default of false ---
-    this.adminDisplayEnabled = false,
-    // --- NEW: Add to constructor ---
-    this.banquetSetupEnabled = false,
-    this.userManagementEnabled = false,
-    this.menuManagementEnabled = false,
-    this.branchManagementEnabled = false,
-  });
+  AppUser(
+      {required this.username,
+      required this.email,
+      required this.branchId,
+      this.podiumEnabled = false,
+      this.waiterEnabled = false,
+      this.customerEnabled = false,
+      this.banquetBookingEnabled = false,
+      this.banquetReportsEnabled = false,
+      this.queueReportsEnabled = false,
+      // --- NEW: Added to constructor with a default of false ---
+      this.adminDisplayEnabled = false,
+      // --- NEW: Add to constructor ---
+      this.banquetSetupEnabled = false,
+      this.userManagementEnabled = false,
+      this.menuManagementEnabled = false,
+      this.branchManagementEnabled = false,
+      this.fcmToken});
 
   bool get isAdmin => username.toLowerCase() == 'admin';
 
@@ -57,6 +58,7 @@ class AppUser {
       'userManagementEnabled': userManagementEnabled,
       'menuManagementEnabled': menuManagementEnabled,
       'branchManagementEnabled': branchManagementEnabled,
+      'fcmToken': fcmToken
     };
   }
 

@@ -1,10 +1,48 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import '../models/app_user.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<StatefulWidget> createState() => DashboardScreenViewState();
+}
+
+class DashboardScreenViewState extends State<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    FirebaseMessaging.instance.getToken().then((token) {
+      print("FCM Token: $token");
+      if (token != null) {
+        saveToken(token: token);
+      }
+    });
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print('Received message: ${message.notification?.title}');
+    });
+  }
+
+  Future<void> saveToken({required String token}) async {
+    try {
+      await context.read<UserProvider>().saveFcm(token: token);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Token saved successfully'),
+            backgroundColor: Colors.green));
+        //Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Error saving token: $e'),
+            backgroundColor: Colors.red));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
