@@ -38,16 +38,6 @@ class _StaffTasksScreenState extends State<StaffTasksScreen> {
       return const Center(child: Text('User not logged in.'));
     }
 
-    // DEBUG: Print current user info
-    print('DEBUG: Current user email: ${currentUser.email}');
-    print('DEBUG: Current user isAdmin: ${currentUser.isAdmin}');
-    print(
-        'DEBUG: Current user canViewStaffTasks: ${currentUser.canViewStaffTasks}');
-    print('DEBUG: Current user branchId: ${currentUser.branchId}');
-    print(
-        'DEBUG: UserProvider currentBranchId: ${userProvider.currentBranchId}');
-    print('DEBUG: TaskProvider branchId: ${taskProvider.branchId}');
-
     // Filter staff users based on current user's branch and capabilities
     // This logic runs every time build is called, which is fine as `allUsers` is reactive
     List<AppUser> currentBrowsableStaff = [];
@@ -61,15 +51,6 @@ class _StaffTasksScreenState extends State<StaffTasksScreen> {
                   u.canViewOwnTasks // Only show users who can view their own tasks (i.e., staff)
               )
           .toList();
-
-      // DEBUG: Print staff filtering info
-      print('DEBUG: Total users: ${allUsers.length}');
-      print('DEBUG: Current user branchId: $currentUserBranchId');
-      print('DEBUG: Current browsable staff: ${currentBrowsableStaff.length}');
-      for (var staff in currentBrowsableStaff) {
-        print(
-            'DEBUG: Staff user: ${staff.email} - branchId: ${staff.branchId} - canViewOwnTasks: ${staff.canViewOwnTasks}');
-      }
 
       if (currentBrowsableStaff.isNotEmpty && _selectedStaffId == null) {
         _selectedStaffId =
@@ -104,20 +85,6 @@ class _StaffTasksScreenState extends State<StaffTasksScreen> {
         ? taskProvider.getTasksForSelectedStaff(
             _selectedStaffId!, 'Sent for Approval')
         : [];
-
-    // DEBUG: Print what tasks we're finding
-    print('DEBUG: Selected staff ID: $_selectedStaffId');
-    print('DEBUG: Assigned tasks: ${assignedTasks.length}');
-    print('DEBUG: In Progress tasks: ${inProgressTasks.length}');
-    print('DEBUG: Completed tasks: ${completedTasks.length}');
-    print('DEBUG: Sent for Approval tasks: ${sentForApprovalTasks.length}');
-
-    // DEBUG: Print all tasks for this staff member to see what statuses exist
-    final allTasksForStaff = taskProvider.getAllTasksForUser(_selectedStaffId!);
-    print('DEBUG: All tasks for staff: ${allTasksForStaff.length}');
-    for (var task in allTasksForStaff) {
-      print('DEBUG: Task "${task.title}" - Status: "${task.status}"');
-    }
 
     final combinedAssigned = [...assignedTasks].toList()
       ..sort((a, b) => a.dueTime.compareTo(b.dueTime));

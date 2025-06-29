@@ -17,6 +17,13 @@ class AppUser {
   final bool userManagementEnabled;
   final bool menuManagementEnabled;
   final bool branchManagementEnabled;
+  // NEW: Task-related permissions
+  final bool _canViewOwnTasks;
+  final bool _canSubmitTasks;
+  final bool _canViewStaffTasks;
+  final bool _canCreateTasks;
+  final bool _canEditAssignedTasks;
+  final bool _canReassignTasks;
   String? fcmToken;
 
   AppUser(
@@ -36,22 +43,29 @@ class AppUser {
       this.userManagementEnabled = false,
       this.menuManagementEnabled = false,
       this.branchManagementEnabled = false,
-      this.fcmToken});
+      // NEW: Task-related permissions
+      bool canViewOwnTasks = false,
+      bool canSubmitTasks = false,
+      bool canViewStaffTasks = false,
+      bool canCreateTasks = false,
+      bool canEditAssignedTasks = false,
+      bool canReassignTasks = false,
+      this.fcmToken})
+      : _canViewOwnTasks = canViewOwnTasks,
+        _canSubmitTasks = canSubmitTasks,
+        _canViewStaffTasks = canViewStaffTasks,
+        _canCreateTasks = canCreateTasks,
+        _canEditAssignedTasks = canEditAssignedTasks,
+        _canReassignTasks = canReassignTasks;
 
   bool get isAdmin => username.toLowerCase() == 'admin';
 
   // NEW: Public getters for task permissions that respect isAdmin status
-  @override
   bool get canViewOwnTasks => isAdmin || _canViewOwnTasks;
-  @override
   bool get canSubmitTasks => isAdmin || _canSubmitTasks;
-  @override
   bool get canViewStaffTasks => isAdmin || _canViewStaffTasks;
-  @override
   bool get canCreateTasks => isAdmin || _canCreateTasks;
-  @override
   bool get canEditAssignedTasks => isAdmin || _canEditAssignedTasks;
-  @override
   bool get canReassignTasks => isAdmin || _canReassignTasks;
 
   Map<String, dynamic> toMap() {
@@ -108,6 +122,7 @@ class AppUser {
       canCreateTasks: map['canCreateTasks'] ?? false,
       canEditAssignedTasks: map['canEditAssignedTasks'] ?? false,
       canReassignTasks: map['canReassignTasks'] ?? false,
+      fcmToken: map['fcmToken'],
     );
   }
 }

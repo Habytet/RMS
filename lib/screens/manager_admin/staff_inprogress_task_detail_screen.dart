@@ -12,10 +12,12 @@ class StaffInProgressTaskDetailScreen extends StatefulWidget {
   const StaffInProgressTaskDetailScreen({super.key, required this.task});
 
   @override
-  State<StaffInProgressTaskDetailScreen> createState() => _StaffInProgressTaskDetailScreenState();
+  State<StaffInProgressTaskDetailScreen> createState() =>
+      _StaffInProgressTaskDetailScreenState();
 }
 
-class _StaffInProgressTaskDetailScreenState extends State<StaffInProgressTaskDetailScreen> {
+class _StaffInProgressTaskDetailScreenState
+    extends State<StaffInProgressTaskDetailScreen> {
   Timer? _displayTimer;
   Duration _elapsedDuration = Duration.zero;
   late Task _currentTask;
@@ -44,17 +46,21 @@ class _StaffInProgressTaskDetailScreenState extends State<StaffInProgressTaskDet
   void _startOrUpdateTimer() {
     _displayTimer?.cancel();
 
-    if (_currentTask.status == 'In Progress' && _currentTask.startedAt != null) {
+    if (_currentTask.status == 'In Progress' &&
+        _currentTask.startedAt != null) {
       _displayTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
         if (mounted) {
           setState(() {
-            _elapsedDuration = DateTime.now().difference(_currentTask.startedAt!);
+            _elapsedDuration =
+                DateTime.now().difference(_currentTask.startedAt!);
           });
         }
       });
-    } else if (_currentTask.startedAt != null && _currentTask.completedAt != null) {
+    } else if (_currentTask.startedAt != null &&
+        _currentTask.completedAt != null) {
       setState(() {
-        _elapsedDuration = _currentTask.completedAt!.difference(_currentTask.startedAt!);
+        _elapsedDuration =
+            _currentTask.completedAt!.difference(_currentTask.startedAt!);
       });
     } else {
       setState(() {
@@ -82,33 +88,39 @@ class _StaffInProgressTaskDetailScreenState extends State<StaffInProgressTaskDet
     // Fetch assignee and assigner details if needed for display
     // FIX: Provide all required AppUser constructor parameters explicitly in orElse
     final assignedToUser = userProvider.users.firstWhere(
-          (u) => u.email == _currentTask.assignedToId,
+      (u) => u.email == _currentTask.assignedToId,
       orElse: () => AppUser(
         username: 'Unknown User',
         email: _currentTask.assignedToId,
         branchId: '', // Default to empty string for unknown branch
         // Explicitly provide all boolean fields, though they have defaults, for clarity/strictness
         podiumEnabled: false, waiterEnabled: false, customerEnabled: false,
-        banquetBookingEnabled: false, banquetReportsEnabled: false, queueReportsEnabled: false,
-        adminDisplayEnabled: false, banquetSetupEnabled: false, userManagementEnabled: false,
+        banquetBookingEnabled: false, banquetReportsEnabled: false,
+        queueReportsEnabled: false,
+        adminDisplayEnabled: false, banquetSetupEnabled: false,
+        userManagementEnabled: false,
         menuManagementEnabled: false, branchManagementEnabled: false,
-        canViewOwnTasks: false, canSubmitTasks: false, canViewStaffTasks: false,
-        canCreateTasks: false, canEditAssignedTasks: false, canReassignTasks: false,
+        canSubmitTasks: false, canViewStaffTasks: false,
+        canCreateTasks: false, canEditAssignedTasks: false,
+        canReassignTasks: false,
       ),
     );
     final assignedByUser = userProvider.users.firstWhere(
-          (u) => u.email == _currentTask.assignedById,
+      (u) => u.email == _currentTask.assignedById,
       orElse: () => AppUser(
         username: 'Unknown User',
         email: _currentTask.assignedById,
         branchId: '', // Default to empty string for unknown branch
         // Explicitly provide all boolean fields
         podiumEnabled: false, waiterEnabled: false, customerEnabled: false,
-        banquetBookingEnabled: false, banquetReportsEnabled: false, queueReportsEnabled: false,
-        adminDisplayEnabled: false, banquetSetupEnabled: false, userManagementEnabled: false,
+        banquetBookingEnabled: false, banquetReportsEnabled: false,
+        queueReportsEnabled: false,
+        adminDisplayEnabled: false, banquetSetupEnabled: false,
+        userManagementEnabled: false,
         menuManagementEnabled: false, branchManagementEnabled: false,
-        canViewOwnTasks: false, canSubmitTasks: false, canViewStaffTasks: false,
-        canCreateTasks: false, canEditAssignedTasks: false, canReassignTasks: false,
+        canSubmitTasks: false, canViewStaffTasks: false,
+        canCreateTasks: false, canEditAssignedTasks: false,
+        canReassignTasks: false,
       ),
     );
 
@@ -120,9 +132,12 @@ class _StaffInProgressTaskDetailScreenState extends State<StaffInProgressTaskDet
           children: [
             // Timer display at the top
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+              padding:
+                  const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
               decoration: BoxDecoration(
-                color: _currentTask.status == 'In Progress' ? Colors.blue.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                color: _currentTask.status == 'In Progress'
+                    ? Colors.blue.withOpacity(0.1)
+                    : Colors.grey.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8.0),
               ),
               child: Row(
@@ -132,14 +147,17 @@ class _StaffInProgressTaskDetailScreenState extends State<StaffInProgressTaskDet
                     _currentTask.status == 'In Progress'
                         ? 'Time Elapsed:'
                         : 'Total Time:', // Will show 'Total Time' if status changes during view
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   Text(
                     _formatDuration(_elapsedDuration),
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
-                      color: _currentTask.status == 'In Progress' ? Colors.blue : Colors.black87,
+                      color: _currentTask.status == 'In Progress'
+                          ? Colors.blue
+                          : Colors.black87,
                     ),
                   ),
                 ],
@@ -147,43 +165,60 @@ class _StaffInProgressTaskDetailScreenState extends State<StaffInProgressTaskDet
             ),
             const SizedBox(height: 20),
 
-            Text('Description: ${_currentTask.description}', style: const TextStyle(fontSize: 16)),
+            Text('Description: ${_currentTask.description}',
+                style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 10),
-            Text('Assigned Date: ${DateFormat('MMM dd,EEEE').format(_currentTask.assignedDate)}'),
-            Text('Assigned Time: ${DateFormat('hh:mm a').format(_currentTask.assignedDate)}'),
-            Text('Due Time: ${DateFormat('MMM dd,EEEE hh:mm a').format(_currentTask.dueTime)}'),
-            Text('Assigned By: ${assignedByUser.username.isEmpty ? assignedByUser.email : assignedByUser.username}'),
-            Text('Assigned To: ${assignedToUser.username.isEmpty ? assignedToUser.email : assignedToUser.username}'),
+            Text(
+                'Assigned Date: ${DateFormat('MMM dd,EEEE').format(_currentTask.assignedDate)}'),
+            Text(
+                'Assigned Time: ${DateFormat('hh:mm a').format(_currentTask.assignedDate)}'),
+            Text(
+                'Due Time: ${DateFormat('MMM dd,EEEE hh:mm a').format(_currentTask.dueTime)}'),
+            Text(
+                'Assigned By: ${assignedByUser.username.isEmpty ? assignedByUser.email : assignedByUser.username}'),
+            Text(
+                'Assigned To: ${assignedToUser.username.isEmpty ? assignedToUser.email : assignedToUser.username}'),
             Text('Status: ${_currentTask.status}'),
             Text('Repeats Daily: ${_currentTask.isRepeating ? 'Yes' : 'No'}'),
-            Text('Started At: ${_currentTask.startedAt != null ? DateFormat('MMM dd, hh:mm:ss a').format(_currentTask.startedAt!) : 'N/A'}'),
+            Text(
+                'Started At: ${_currentTask.startedAt != null ? DateFormat('MMM dd, hh:mm:ss a').format(_currentTask.startedAt!) : 'N/A'}'),
             const SizedBox(height: 20),
 
-            const Text('Images Attached:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Images Attached:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             if (_currentTask.imagesAttached.isEmpty)
               const Text('No images attached by assigner.')
             else
               Wrap(
                 spacing: 8.0,
                 runSpacing: 8.0,
-                children: _currentTask.imagesAttached.map((url) => Image.network(url, width: 100, height: 100, fit: BoxFit.cover)).toList(),
+                children: _currentTask.imagesAttached
+                    .map((url) => Image.network(url,
+                        width: 100, height: 100, fit: BoxFit.cover))
+                    .toList(),
               ),
             const SizedBox(height: 20),
 
-            const Text('Images Received (from assignee):', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Images Received (from assignee):',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             if (_currentTask.imagesCaptured.isEmpty)
               const Text('No images captured by assignee yet.')
             else
               Wrap(
                 spacing: 8.0,
                 runSpacing: 8.0,
-                children: _currentTask.imagesCaptured.map((url) => Image.network(url, width: 100, height: 100, fit: BoxFit.cover)).toList(),
+                children: _currentTask.imagesCaptured
+                    .map((url) => Image.network(url,
+                        width: 100, height: 100, fit: BoxFit.cover))
+                    .toList(),
               ),
             const SizedBox(height: 20),
 
-            Text('Yes/No Response: ${_currentTask.yesNoResponse == null ? 'Pending' : (_currentTask.yesNoResponse! ? 'Yes' : 'No')}'),
+            Text(
+                'Yes/No Response: ${_currentTask.yesNoResponse == null ? 'Pending' : (_currentTask.yesNoResponse! ? 'Yes' : 'No')}'),
             const SizedBox(height: 10),
-            Text('Comments: ${_currentTask.comments.isEmpty ? 'No comments' : _currentTask.comments}'),
+            Text(
+                'Comments: ${_currentTask.comments.isEmpty ? 'No comments' : _currentTask.comments}'),
           ],
         ),
       ),
