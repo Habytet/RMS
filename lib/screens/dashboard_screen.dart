@@ -22,6 +22,8 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen>
     with SingleTickerProviderStateMixin {
+
+  final NotificationBloc _bloc = NotificationBloc();
   late final AnimationController _bgAnimationController;
 
   @override
@@ -30,7 +32,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     _bgAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 15),
-    )..repeat(reverse: true);
+    )
+      ..repeat(reverse: true);
     super.initState();
     FirebaseMessaging.instance.getToken().then((token) {
       print("FCM Token: $token");
@@ -70,6 +73,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             content: Text('Error saving token: $e'),
             backgroundColor: Colors.red));
     }
+  }
 
   @override
   void dispose() {
@@ -92,7 +96,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                 Color(0xFFBE5F41), // Original: #EE7752 -> Darker Orange
               ],
               stops: const [0.0, 1.0],
-              transform: GradientRotation(_bgAnimationController.value * 3.1415 * 2),
+              transform: GradientRotation(
+                  _bgAnimationController.value * 3.1415 * 2),
             ),
           ),
         );
@@ -102,7 +107,9 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<UserProvider>().currentUser;
+    final user = context
+        .watch<UserProvider>()
+        .currentUser;
 
     if (user == null) {
       return Scaffold(
@@ -156,10 +163,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                     user.banquetSetupEnabled ||
                     user.banquetReportsEnabled ||
                     user.isAdmin)
-                  _moduleCard(context, 'Banquet', Icons.celebration_outlined, () {
+                  _moduleCard(
+                      context, 'Banquet', Icons.celebration_outlined, () {
                     _openBanquetModule(context, user);
                   }),
-                if (user.canViewOwnTasks || user.canViewStaffTasks || user.isAdmin)
+                if (user.canViewOwnTasks || user.canViewStaffTasks ||
+                    user.isAdmin)
                   _moduleCard(context, 'Tasks', Icons.task_alt_outlined, () {
                     _openTasksModule(context, user);
                   }),
@@ -173,9 +182,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                     user.menuManagementEnabled ||
                     user.branchManagementEnabled ||
                     user.isAdmin)
-                  _moduleCard(context, 'Admin', Icons.admin_panel_settings_outlined, () {
-                    _openAdminModule(context, user);
-                  }),
+                  _moduleCard(context, 'Admin',
+                      Icons.admin_panel_settings_outlined, () {
+                        _openAdminModule(context, user);
+                      }),
               ],
             ),
           ),
@@ -184,8 +194,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _moduleCard(
-      BuildContext context, String label, IconData icon, VoidCallback onTap) {
+  Widget _moduleCard(BuildContext context, String label, IconData icon,
+      VoidCallback onTap) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
@@ -223,62 +233,77 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  void _openSubMenu(
-      BuildContext context, String title, List<Map<String, String>> items) {
+  void _openSubMenu(BuildContext context, String title,
+      List<Map<String, String>> items) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => ClipRRect(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-          child: Container(
-            decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                ),
-                border: Border(top: BorderSide(color: Colors.white.withOpacity(0.2)))
+      builder: (_) =>
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
             ),
-            child: SafeArea(
-              child: ListView(
-                shrinkWrap: true,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Colors.white,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              child: Container(
+                decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                    border: Border(
+                        top: BorderSide(color: Colors.white.withOpacity(0.2)))
+                ),
+                child: SafeArea(
+                  child: ListView(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          title,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
-                    ),
+                      const Divider(
+                          color: Colors.white24, indent: 16, endIndent: 16),
+                      ...items.map((i) =>
+                          ListTile(
+                            leading: const Icon(
+                                Icons.arrow_forward_ios, size: 14,
+                                color: Colors.white70),
+                            title: Text(
+                              i['title']!,
+                              style: GoogleFonts.inter(
+                                  color: Colors.white, fontSize: 16),
+                            ),
+                            onTap: () {
+                              Navigator.pop(context);
+                              if (i['title'] == 'View Bookings') {
+                                AppNavigator.toPush(
+                                    context: context,
+                                    widget: BanquetBookingsReportScreen(
+                                      notificationBloc: _bloc,
+                                    ));
+                              } else {
+                                Navigator.pushNamed(context, i['route']!);
+                              }
+                            },
+                          )),
+                    ],
                   ),
-                  const Divider(color: Colors.white24, indent: 16, endIndent: 16),
-                  ...items.map((i) => ListTile(
-                    leading: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white70),
-                    title: Text(
-                      i['title']!,
-                      style: GoogleFonts.inter(color: Colors.white, fontSize: 16),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, i['route']!);
-                    },
-                  )),
-                ],
+                ),
               ),
             ),
           ),
-        ),
-      ),
     );
   }
 
@@ -319,7 +344,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       items.add({'title': 'My Tasks', 'route': '/tasks/branch_manager'});
     }
     if (user.canViewStaffTasks || user.isAdmin) {
-      items.add({'title': 'Staff Task Management', 'route': '/tasks/manager_admin/staff_tasks'});
+      items.add({
+        'title': 'Staff Task Management',
+        'route': '/tasks/manager_admin/staff_tasks'
+      });
     }
     _openSubMenu(context, 'Task Management', items);
   }
@@ -345,35 +373,36 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
     _openSubMenu(context, 'Admin Module', items);
   }
-
-  void _openSubMenu(
-      BuildContext context, String title, List<Map<String, String>> items) {
-    showModalBottomSheet(
-      context: context,
-      builder: (_) => ListView(
-        shrinkWrap: true,
-        children: [
-          ListTile(
-              title: Text(title,
-                  style: const TextStyle(fontWeight: FontWeight.bold))),
-          const Divider(),
-          ...items.map((i) => ListTile(
-                title: Text(i['title']!),
-                onTap: () {
-                  Navigator.pop(context);
-                  if (i['title'] == 'View Bookings') {
-                    AppNavigator.toPush(
-                        context: context,
-                        widget: BanquetBookingsReportScreen(
-                          notificationBloc: _bloc,
-                        ));
-                  } else {
-                    Navigator.pushNamed(context, i['route']!);
-                  }
-                },
-              )),
-        ],
-      ),
-    );
-  }
 }
+
+//   void _openSubMenu(
+//       BuildContext context, String title, List<Map<String, String>> items) {
+//     showModalBottomSheet(
+//       context: context,
+//       builder: (_) => ListView(
+//         shrinkWrap: true,
+//         children: [
+//           ListTile(
+//               title: Text(title,
+//                   style: const TextStyle(fontWeight: FontWeight.bold))),
+//           const Divider(),
+//           ...items.map((i) => ListTile(
+//                 title: Text(i['title']!),
+//                 onTap: () {
+//                   Navigator.pop(context);
+//                   if (i['title'] == 'View Bookings') {
+//                     AppNavigator.toPush(
+//                         context: context,
+//                         widget: BanquetBookingsReportScreen(
+//                           notificationBloc: _bloc,
+//                         ));
+//                   } else {
+//                     Navigator.pushNamed(context, i['route']!);
+//                   }
+//                 },
+//               )),
+//         ],
+//       ),
+//     );
+//   }
+// }

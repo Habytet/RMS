@@ -19,6 +19,14 @@ class AppUser {
   final bool branchManagementEnabled;
   String? fcmToken;
 
+  // NEW: Task-related permissions
+  final bool canViewOwnTasks; // Made private to override with admin check
+  final bool canSubmitTasks; // Made private to override with admin check
+  final bool canViewStaffTasks; // Made private to override with admin check
+  final bool canCreateTasks; // Made private to override with admin check
+  final bool canEditAssignedTasks; // Made private to override with admin check
+  final bool canReassignTasks; // Made private to override with admin check
+
   AppUser(
       {required this.username,
       required this.email,
@@ -36,23 +44,29 @@ class AppUser {
       this.userManagementEnabled = false,
       this.menuManagementEnabled = false,
       this.branchManagementEnabled = false,
-      this.fcmToken});
+      this.fcmToken,
+      this.canViewOwnTasks = false,
+      this.canSubmitTasks = false,
+      this.canViewStaffTasks = false,
+      this.canCreateTasks = false,
+      this.canEditAssignedTasks = false,
+      this.canReassignTasks = false});
 
   bool get isAdmin => username.toLowerCase() == 'admin';
 
-  // NEW: Public getters for task permissions that respect isAdmin status
-  @override
-  bool get canViewOwnTasks => isAdmin || _canViewOwnTasks;
-  @override
-  bool get canSubmitTasks => isAdmin || _canSubmitTasks;
-  @override
-  bool get canViewStaffTasks => isAdmin || _canViewStaffTasks;
-  @override
-  bool get canCreateTasks => isAdmin || _canCreateTasks;
-  @override
-  bool get canEditAssignedTasks => isAdmin || _canEditAssignedTasks;
-  @override
-  bool get canReassignTasks => isAdmin || _canReassignTasks;
+  // // NEW: Public getters for task permissions that respect isAdmin status
+  // @override
+  // bool get canViewOwnTasks => isAdmin || _canViewOwnTasks;
+  // @override
+  // bool get canSubmitTasks => isAdmin || _canSubmitTasks;
+  // @override
+  // bool get canViewStaffTasks => isAdmin || _canViewStaffTasks;
+  // @override
+  // bool get canCreateTasks => isAdmin || _canCreateTasks;
+  // @override
+  // bool get canEditAssignedTasks => isAdmin || _canEditAssignedTasks;
+  // @override
+  // bool get canReassignTasks => isAdmin || _canReassignTasks;
 
   Map<String, dynamic> toMap() {
     return {
@@ -73,12 +87,12 @@ class AppUser {
       'menuManagementEnabled': menuManagementEnabled,
       'branchManagementEnabled': branchManagementEnabled,
       // NEW: Task-related permissions (save the actual stored value, not the overridden one)
-      'canViewOwnTasks': _canViewOwnTasks,
-      'canSubmitTasks': _canSubmitTasks,
-      'canViewStaffTasks': _canViewStaffTasks,
-      'canCreateTasks': _canCreateTasks,
-      'canEditAssignedTasks': _canEditAssignedTasks,
-      'canReassignTasks': _canReassignTasks,
+      'canViewOwnTasks': canViewOwnTasks,
+      'canSubmitTasks': canSubmitTasks,
+      'canViewStaffTasks': canViewStaffTasks,
+      'canCreateTasks': canCreateTasks,
+      'canEditAssignedTasks': canEditAssignedTasks,
+      'canReassignTasks': canReassignTasks,
       'fcmToken': fcmToken
     };
   }
