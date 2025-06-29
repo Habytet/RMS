@@ -1,6 +1,12 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
+import 'package:token_manager/resources/app_navigator.dart';
+import 'package:token_manager/screens/banquet/banquet_bookings_report_screen.dart';
+import 'package:token_manager/screens/notification_screen/notification_bloc.dart';
+import 'package:token_manager/screens/notification_screen/notification_event.dart';
+import 'package:token_manager/screens/notification_screen/notification_screen.dart';
 import '../providers/user_provider.dart';
 import '../models/app_user.dart';
 
@@ -12,6 +18,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class DashboardScreenViewState extends State<DashboardScreen> {
+  final NotificationBloc _bloc = NotificationBloc();
   @override
   void initState() {
     super.initState();
@@ -19,11 +26,22 @@ class DashboardScreenViewState extends State<DashboardScreen> {
       print("FCM Token: $token");
       if (token != null) {
         saveToken(token: token);
+        _bloc.add(SetFcmTokenEvent(fcmToken: token));
       }
     });
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print('Received message: ${message.notification?.title}');
+      final title = message.notification?.title ?? 'No Title';
+      final body = message.notification?.body ?? 'No Body';
+
+      // Show a snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$title: $body'),
+          duration: Duration(seconds: 5),
+        ),
+      );
     });
   }
 
@@ -60,51 +78,64 @@ class DashboardScreenViewState extends State<DashboardScreen> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => context.read<UserProvider>().logout(),
-          )
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: GridView.count(
-          crossAxisCount: 1,
-          childAspectRatio: 2.5,
-          children: [
-            if (user.podiumEnabled ||
-                user.waiterEnabled ||
-                user.customerEnabled ||
-                user.adminDisplayEnabled ||
-                user.isAdmin)
-              _moduleCard(context, 'Queue', Icons.people, () {
-                _openQueueModule(context, user);
-              }),
-            if (user.banquetBookingEnabled ||
-                user.banquetSetupEnabled ||
-                user.banquetReportsEnabled ||
-                user.isAdmin)
-              _moduleCard(context, 'Banquet', Icons.apartment, () {
-                _openBanquetModule(context, user);
-              }),
-            if (user.queueReportsEnabled ||
-                user.banquetReportsEnabled ||
-                user.isAdmin)
-              _moduleCard(context, 'Reports', Icons.bar_chart, () {
-                _openReportsModule(context, user);
-              }),
-            if (user.userManagementEnabled ||
-                user.menuManagementEnabled ||
-                user.branchManagementEnabled ||
-                user.isAdmin)
-              _moduleCard(context, 'Admin', Icons.admin_panel_settings, () {
-                _openAdminModule(context, user);
-              }),
+    return BlocProvider<NotificationBloc>(
+      lazy: false,
+      create: (BuildContext context) => _bloc,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Dashboard'),
+          actions: [
+            IconButton(
+                icon: const Icon(Icons.notifications),
+                onPressed: () => AppNavigator.toPush(
+                      context: context,
+                      widget: NotificationScreen(bloc: _bloc),
+                    )),
+            const SizedBox(
+              width: 10,
+            ),
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: () => context.read<UserProvider>().logout(),
+            )
           ],
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: GridView.count(
+            crossAxisCount: 1,
+            childAspectRatio: 2.5,
+            children: [
+              if (user.podiumEnabled ||
+                  user.waiterEnabled ||
+                  user.customerEnabled ||
+                  user.adminDisplayEnabled ||
+                  user.isAdmin)
+                _moduleCard(context, 'Queue', Icons.people, () {
+                  _openQueueModule(context, user);
+                }),
+              if (user.banquetBookingEnabled ||
+                  user.banquetSetupEnabled ||
+                  user.banquetReportsEnabled ||
+                  user.isAdmin)
+                _moduleCard(context, 'Banquet', Icons.apartment, () {
+                  _openBanquetModule(context, user);
+                }),
+              if (user.queueReportsEnabled ||
+                  user.banquetReportsEnabled ||
+                  user.isAdmin)
+                _moduleCard(context, 'Reports', Icons.bar_chart, () {
+                  _openReportsModule(context, user);
+                }),
+              if (user.userManagementEnabled ||
+                  user.menuManagementEnabled ||
+                  user.branchManagementEnabled ||
+                  user.isAdmin)
+                _moduleCard(context, 'Admin', Icons.admin_panel_settings, () {
+                  _openAdminModule(context, user);
+                }),
+            ],
+          ),
         ),
       ),
     );
@@ -188,7 +219,15 @@ class DashboardScreenViewState extends State<DashboardScreen> {
                 title: Text(i['title']!),
                 onTap: () {
                   Navigator.pop(context);
-                  Navigator.pushNamed(context, i['route']!);
+                  if (i['title'] == 'View Bookings') {
+                    AppNavigator.toPush(
+                        context: context,
+                        widget: BanquetBookingsReportScreen(
+                          notificationBloc: _bloc,
+                        ));
+                  } else {
+                    Navigator.pushNamed(context, i['route']!);
+                  }
                 },
               )),
         ],
