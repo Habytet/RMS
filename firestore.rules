@@ -1,0 +1,75 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Function to check if the requesting user is a Super Admin
+    function isSuperAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == 'admin';
+    }
+
+    // Function to check if the requesting user is a Corporate user (All branches)
+    function isCorporate() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.branchId == 'all';
+    }
+
+    // Function to check if the requesting user is a member of the branch
+    function isBranchMember(branchId) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.branchId == branchId;
+    }
+
+    // Function to check if the user has banquetReportsEnabled permission
+    function hasBanquetReportsPermission() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.banquetReportsEnabled == true;
+    }
+
+    // Function to check if user can view staff tasks
+    function canViewStaffTasks() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.canViewStaffTasks == true;
+    }
+
+    // --- USERS Collection ---
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth.uid == userId || isSuperAdmin();
+      allow update: if request.auth.uid == userId || isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // --- BRANCHES Collection ---
+    match /branches/{branchId} {
+      allow read: if request.auth != null && (
+        isBranchMember(branchId) ||
+        isSuperAdmin() ||
+        isCorporate()
+      );
+      allow write: if request.auth != null && (isBranchMember(branchId) || isSuperAdmin());
+    }
+
+    // --- Subcollections within a Branch (e.g., queue, completed, halls, banquetBookings, etc.) ---
+    match /branches/{branchId}/{subcollection}/{docId=**} {
+      allow read: if request.auth != null && (
+        isBranchMember(branchId) ||
+        isSuperAdmin() ||
+        isCorporate() ||
+        hasBanquetReportsPermission()
+      );
+      allow write: if request.auth != null && (isBranchMember(branchId) || isSuperAdmin());
+    }
+
+    // --- TASKS Collection (NEW) ---
+    match /branches/{branchId}/tasks/{taskId} {
+      allow read: if request.auth != null && (
+        isBranchMember(branchId) ||
+        isSuperAdmin() ||
+        isCorporate() ||
+        canViewStaffTasks()
+      );
+      allow write: if request.auth != null && (
+        isBranchMember(branchId) ||
+        isSuperAdmin() ||
+        isCorporate()
+      );
+    }
+  }
+}

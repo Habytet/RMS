@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart'; // Required for the fix
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/app_user.dart';
@@ -15,16 +15,23 @@ class UserProvider extends ChangeNotifier {
   AppUser? _currentUser;
   String _currentBranchId = 'all';
   List<Branch> _branches = [];
+  List<AppUser> _allUsers = []; // NEW: To store all fetched AppUsers
   bool _isLoadingBranches = true;
+  bool _isLoadingUsers = true; // NEW: Loading state for users
   AuthStatus _authStatus = AuthStatus.unknown;
 
   StreamSubscription? _branchSubscription;
   StreamSubscription? _authSubscription;
+  StreamSubscription? _allUsersSubscription; // NEW: Subscription for all users
 
   AppUser? get currentUser => _currentUser;
   String get currentBranchId => _currentBranchId;
   List<Branch> get branches => List.unmodifiable(_branches);
+  List<AppUser> get users =>
+      List.unmodifiable(_allUsers); // NEW: Getter for all users
   bool get isLoadingBranches => _isLoadingBranches;
+  bool get isLoadingUsers =>
+      _isLoadingUsers; // NEW: Getter for user loading state
   AuthStatus get authStatus => _authStatus;
 
   UserProvider() {
@@ -33,8 +40,11 @@ class UserProvider extends ChangeNotifier {
 
   Future<void> _onAuthStateChanged(User? user) async {
     await _branchSubscription?.cancel();
+    await _allUsersSubscription?.cancel(); // NEW: Cancel users subscription
     _branches = [];
+    _allUsers = []; // NEW: Clear users
     _isLoadingBranches = true;
+    _isLoadingUsers = true; // NEW: Reset user loading state
 
     if (user == null) {
       _currentUser = null;
@@ -45,6 +55,7 @@ class UserProvider extends ChangeNotifier {
       if (_currentUser != null) {
         _authStatus = AuthStatus.authenticated;
         _listenToBranches();
+        _listenToAllUsers(); // NEW: Start listening to all users
       } else {
         _authStatus = AuthStatus.unauthenticated;
         await _auth.signOut();
@@ -58,7 +69,11 @@ class UserProvider extends ChangeNotifier {
       final doc = await _firestore.collection('users').doc(user.uid).get();
       if (doc.exists && doc.data() != null) {
         _currentUser = AppUser.fromMap(doc.data()!);
-        _currentBranchId = _currentUser!.branchId;
+        if (_currentUser!.isAdmin || _currentUser!.canViewStaffTasks) {
+          _currentBranchId = 'all';
+        } else {
+          _currentBranchId = _currentUser!.branchId;
+        }
       } else {
         _currentUser = null;
       }
@@ -71,9 +86,11 @@ class UserProvider extends ChangeNotifier {
   void _listenToBranches() {
     _isLoadingBranches = true;
     notifyListeners();
-    _branchSubscription = _firestore.collection('branches').snapshots().listen((snapshot) {
+    _branchSubscription =
+        _firestore.collection('branches').snapshots().listen((snapshot) {
       _branches = snapshot.docs
-          .map((doc) => Branch.fromFirestore(doc.id, doc.data() as Map<String, dynamic>))
+          .map((doc) =>
+              Branch.fromFirestore(doc.id, doc.data() as Map<String, dynamic>))
           .toList();
       _isLoadingBranches = false;
       notifyListeners();
@@ -85,24 +102,41 @@ class UserProvider extends ChangeNotifier {
     });
   }
 
-  // *** CRITICAL FIX: This function no longer logs the admin out. ***
+  // NEW: Method to listen to all users
+  void _listenToAllUsers() {
+    _isLoadingUsers = true;
+    notifyListeners();
+    _allUsersSubscription =
+        _firestore.collection('users').snapshots().listen((snapshot) {
+      _allUsers = snapshot.docs
+          .map((doc) => AppUser.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
+      _isLoadingUsers = false;
+      notifyListeners();
+    }, onError: (error) {
+      debugPrint('Error listening to all users: $error');
+      _isLoadingUsers = false;
+      _allUsers = [];
+      notifyListeners();
+    });
+  }
+
   Future<void> addUser(String email, String password, AppUser profile) async {
-    // Create a temporary, secondary Firebase app instance.
     FirebaseApp tempApp = await Firebase.initializeApp(
-      name: 'tempUserCreator', // A unique name for the temporary app
+      name: 'tempUserCreator',
       options: Firebase.app().options,
     );
 
     try {
-      // Create the user with the temporary auth instance.
-      // This does NOT affect the main app's logged-in admin.
-      UserCredential newUserCredential = await FirebaseAuth.instanceFor(app: tempApp)
-          .createUserWithEmailAndPassword(email: email, password: password);
+      UserCredential newUserCredential =
+          await FirebaseAuth.instanceFor(app: tempApp)
+              .createUserWithEmailAndPassword(email: email, password: password);
 
-      // After creating the user, save their profile to Firestore using their new UID.
-      await _firestore.collection('users').doc(newUserCredential.user!.uid).set(profile.toMap());
+      await _firestore
+          .collection('users')
+          .doc(newUserCredential.user!.uid)
+          .set(profile.toMap());
     } finally {
-      // Delete the temporary app instance to clean up resources.
       await tempApp.delete();
     }
   }
@@ -133,7 +167,10 @@ class UserProvider extends ChangeNotifier {
 
   Future<void> updateBranch(String branchId, String newName) async {
     if (newName.isEmpty) return;
-    await _firestore.collection('branches').doc(branchId).update({'name': newName});
+    await _firestore
+        .collection('branches')
+        .doc(branchId)
+        .update({'name': newName});
   }
 
   Future<void> deleteBranch(String branchId) async {
@@ -144,6 +181,7 @@ class UserProvider extends ChangeNotifier {
   void dispose() {
     _branchSubscription?.cancel();
     _authSubscription?.cancel();
+    _allUsersSubscription?.cancel(); // NEW: Cancel all users subscription
     super.dispose();
   }
 }

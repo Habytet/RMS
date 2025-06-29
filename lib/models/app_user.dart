@@ -18,6 +18,15 @@ class AppUser {
   final bool menuManagementEnabled;
   final bool branchManagementEnabled;
 
+  // NEW: Task-related permissions
+  final bool _canViewOwnTasks; // Made private to override with admin check
+  final bool _canSubmitTasks; // Made private to override with admin check
+  final bool _canViewStaffTasks; // Made private to override with admin check
+  final bool _canCreateTasks; // Made private to override with admin check
+  final bool _canEditAssignedTasks; // Made private to override with admin check
+  final bool _canReassignTasks; // Made private to override with admin check
+
+
   AppUser({
     required this.username,
     required this.email,
@@ -35,9 +44,35 @@ class AppUser {
     this.userManagementEnabled = false,
     this.menuManagementEnabled = false,
     this.branchManagementEnabled = false,
-  });
+    // NEW: Task-related permissions added to constructor (using private fields)
+    bool canViewOwnTasks = false,
+    bool canSubmitTasks = false,
+    bool canViewStaffTasks = false,
+    bool canCreateTasks = false,
+    bool canEditAssignedTasks = false,
+    bool canReassignTasks = false,
+  }) : _canViewOwnTasks = canViewOwnTasks,
+        _canSubmitTasks = canSubmitTasks,
+        _canViewStaffTasks = canViewStaffTasks,
+        _canCreateTasks = canCreateTasks,
+        _canEditAssignedTasks = canEditAssignedTasks,
+        _canReassignTasks = canReassignTasks;
 
   bool get isAdmin => username.toLowerCase() == 'admin';
+
+  // NEW: Public getters for task permissions that respect isAdmin status
+  @override
+  bool get canViewOwnTasks => isAdmin || _canViewOwnTasks;
+  @override
+  bool get canSubmitTasks => isAdmin || _canSubmitTasks;
+  @override
+  bool get canViewStaffTasks => isAdmin || _canViewStaffTasks;
+  @override
+  bool get canCreateTasks => isAdmin || _canCreateTasks;
+  @override
+  bool get canEditAssignedTasks => isAdmin || _canEditAssignedTasks;
+  @override
+  bool get canReassignTasks => isAdmin || _canReassignTasks;
 
   Map<String, dynamic> toMap() {
     return {
@@ -57,6 +92,13 @@ class AppUser {
       'userManagementEnabled': userManagementEnabled,
       'menuManagementEnabled': menuManagementEnabled,
       'branchManagementEnabled': branchManagementEnabled,
+      // NEW: Task-related permissions (save the actual stored value, not the overridden one)
+      'canViewOwnTasks': _canViewOwnTasks,
+      'canSubmitTasks': _canSubmitTasks,
+      'canViewStaffTasks': _canViewStaffTasks,
+      'canCreateTasks': _canCreateTasks,
+      'canEditAssignedTasks': _canEditAssignedTasks,
+      'canReassignTasks': _canReassignTasks,
     };
   }
 
@@ -78,6 +120,13 @@ class AppUser {
       userManagementEnabled: map['userManagementEnabled'] ?? false,
       menuManagementEnabled: map['menuManagementEnabled'] ?? false,
       branchManagementEnabled: map['branchManagementEnabled'] ?? false,
+      // NEW: Task-related permissions read from map
+      canViewOwnTasks: map['canViewOwnTasks'] ?? false,
+      canSubmitTasks: map['canSubmitTasks'] ?? false,
+      canViewStaffTasks: map['canViewStaffTasks'] ?? false,
+      canCreateTasks: map['canCreateTasks'] ?? false,
+      canEditAssignedTasks: map['canEditAssignedTasks'] ?? false,
+      canReassignTasks: map['canReassignTasks'] ?? false,
     );
   }
 }

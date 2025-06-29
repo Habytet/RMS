@@ -12,6 +12,8 @@ dependencies:
   flutter:
     sdk: flutter
 
+  google_fonts: ^6.2.1
+
   # State & Storage (Updated to latest versions)
   provider: ^6.1.2
   hive: ^2.2.3

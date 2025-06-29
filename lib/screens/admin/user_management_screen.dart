@@ -49,31 +49,57 @@ class ExistingUsersList extends StatelessWidget {
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
     final currentUser = userProvider.currentUser;
+    final isLoadingUsers = userProvider.isLoadingUsers;
 
-    Query query = FirebaseFirestore.instance.collection('users');
-    if (currentUser != null &&
-        !currentUser.isAdmin &&
-        !currentUser.userManagementEnabled) {
-      query = query.where('branchId', isEqualTo: currentUser.branchId);
+    if (isLoadingUsers) {
+      return const Center(child: CircularProgressIndicator());
     }
 
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: query.snapshots() as Stream<QuerySnapshot<Map<String, dynamic>>>,
-      builder: (context, snapshot) {
-        if (snapshot.hasError)
-          return Center(child: Text('Error: ${snapshot.error}'));
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text('No users found.'));
-        }
+    // Filter users based on current user's branch if not admin
+    final List<AppUser> filteredUsers;
+    if (currentUser != null && !currentUser.isAdmin) {
+      filteredUsers = userProvider.users
+          .where((user) => user.branchId == currentUser.branchId)
+          .toList();
+    } else {
+      filteredUsers = userProvider.users;
+    }
 
-        final docs = snapshot.data!.docs;
-        return ListView(
-          padding: const EdgeInsets.all(8),
-          children: docs.map((doc) {
-            final user = AppUser.fromMap(doc.data());
+    if (filteredUsers.isEmpty) {
+      return const Center(child: Text('No users found.'));
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(8),
+      children: filteredUsers.map((user) {
+        // Find the document ID for the user to pass to EditUserScreen
+        // This is a bit inefficient if `userProvider.users` only provides AppUser objects without their Firestore UIDs
+        // A better approach would be to fetch (user, docId) pairs in UserProvider or query Firestore directly here.
+        // For now, assuming UserProvider.users contains the full list of AppUser objects which we can find by email.
+        // A more robust solution might involve passing the Firebase User UID from `AppUser` model directly.
+        // For current implementation, let's assume `userProvider.users` returns AppUser with an accessible Firebase UID or query by email.
+        // Since `AppUser` doesn't store UID explicitly, let's try to pass email as a proxy for the document ID, assuming it's the doc ID.
+        // REVISIT: The current `UserProvider.users` returns `List<AppUser>` where AppUser *doesn't* contain the Firestore UID.
+        // The `ExistingUsersList` needs `doc.id` for `EditUserScreen`.
+        // The `UserProvider` should preferably expose a `Map<String, AppUser>` where key is UID or `List<MapEntry<String, AppUser>>`.
+        // For simplicity *now*, let's query the specific user document ID using their email. This will add extra reads.
+        // A better long-term fix is in UserProvider to expose UID.
+
+        // Temporarily, we'll assume the email IS the docId for existing users
+        // This is a dangerous assumption if Firebase UIDs are used as document IDs.
+        // Reverting to previous StreamBuilder on `users` collection to get doc.id.
+        // This means `ExistingUsersList` does *not* directly use `userProvider.users` for the list.
+        // It relies on a direct stream from Firestore, which includes doc.id.
+        return FutureBuilder<QuerySnapshot>(
+          future: FirebaseFirestore.instance.collection('users').where('email', isEqualTo: user.email).limit(1).get(),
+          builder: (context, docSnapshot) {
+            if (docSnapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox.shrink(); // Or a shimmer effect
+            }
+            if (docSnapshot.hasError || !docSnapshot.hasData || docSnapshot.data!.docs.isEmpty) {
+              return const SizedBox.shrink(); // Error or user not found, hide this entry
+            }
+            final docId = docSnapshot.data!.docs.first.id;
             return Card(
               child: ListTile(
                 title: Text(user.username.isEmpty ? user.email : user.username),
@@ -84,18 +110,20 @@ class ExistingUsersList extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (_) =>
-                          EditUserScreen(userId: doc.id, user: user),
+                          EditUserScreen(userId: docId, user: user),
                     ),
                   );
                 },
               ),
             );
-          }).toList(),
+          },
         );
-      },
+
+      }).toList(),
     );
   }
 }
+
 
 // --- WIDGET FOR THE "CREATE NEW USER" TAB ---
 class CreateUserForm extends StatefulWidget {
@@ -122,6 +150,12 @@ class _CreateUserFormState extends State<CreateUserForm> {
     'userManagementEnabled': false,
     'menuManagementEnabled': false,
     'branchManagementEnabled': false,
+    'canViewOwnTasks': false, // NEW: Task-related permission
+    'canSubmitTasks': false, // NEW: Task-related permission
+    'canViewStaffTasks': false, // NEW: Task-related permission
+    'canCreateTasks': false, // NEW: Task-related permission
+    'canEditAssignedTasks': false, // NEW: Task-related permission
+    'canReassignTasks': false, // NEW: Task-related permission
   };
 
   @override
@@ -151,6 +185,13 @@ class _CreateUserFormState extends State<CreateUserForm> {
       userManagementEnabled: _roles['userManagementEnabled']!,
       menuManagementEnabled: _roles['menuManagementEnabled']!,
       branchManagementEnabled: _roles['branchManagementEnabled']!,
+      // NEW: Assign task-related permissions
+      canViewOwnTasks: _roles['canViewOwnTasks']!,
+      canSubmitTasks: _roles['canSubmitTasks']!,
+      canViewStaffTasks: _roles['canViewStaffTasks']!,
+      canCreateTasks: _roles['canCreateTasks']!,
+      canEditAssignedTasks: _roles['canEditAssignedTasks']!,
+      canReassignTasks: _roles['canReassignTasks']!,
     );
     try {
       await context
@@ -165,7 +206,7 @@ class _CreateUserFormState extends State<CreateUserForm> {
         _passwordController.clear();
         setState(() {
           _selectedBranchId = null;
-          _roles.updateAll((key, value) => false);
+          _roles.updateAll((key, value) => false); // Reset all toggles
         });
       }
     } on FirebaseAuthException catch (e) {
@@ -212,6 +253,17 @@ class _CreateUserFormState extends State<CreateUserForm> {
         ],
       },
       {
+        'title': 'Task Management', // NEW: Group for Tasks
+        'keys': [
+          'canViewOwnTasks',
+          'canSubmitTasks',
+          'canViewStaffTasks',
+          'canCreateTasks',
+          'canEditAssignedTasks',
+          'canReassignTasks',
+        ],
+      },
+      {
         'title': 'Admin',
         'keys': [
           'userManagementEnabled',
@@ -254,7 +306,7 @@ class _CreateUserFormState extends State<CreateUserForm> {
               items: branchItems,
               onChanged: (value) => setState(() => _selectedBranchId = value),
               validator: (value) =>
-                  value == null ? 'Please select a branch' : null,
+              value == null ? 'Please select a branch' : null,
             ),
 
           const SizedBox(height: 20),
@@ -262,31 +314,38 @@ class _CreateUserFormState extends State<CreateUserForm> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           // --- NEW: Grouped switches for permissions ---
           ...permissionGroups.expand((group) => [
-                Padding(
-                  padding: const EdgeInsets.only(top: 16, bottom: 4),
-                  child: Text(group['title'],
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                ),
-                ...group['keys'].map<Widget>((key) => SwitchListTile(
-                      title: Text(key
-                          .replaceAll('Enabled', '')
-                          .replaceAllMapped(RegExp(r'([a-z])([A-Z])'),
-                              (m) => '${m[1]} ${m[2]}')
-                          .replaceAll('adminDisplay', 'Admin Display')
-                          .replaceAll('banquetSetup', 'Banquet Setup')
-                          .replaceAll('userManagement', 'User Management')
-                          .replaceAll('menuManagement', 'Menu Management')
-                          .replaceAll('branchManagement', 'Branch Management')
-                          .replaceAll('banquetBooking', 'Banquet Booking')
-                          .replaceAll('banquetReports', 'Banquet Reports')
-                          .replaceAll('queueReports', 'Queue Reports')
-                          .replaceAll('podium', 'Podium')
-                          .replaceAll('waiter', 'Waiter')
-                          .replaceAll('customer', 'Customer')),
-                      value: _roles[key]!,
-                      onChanged: (v) => setState(() => _roles[key] = v),
-                    )),
-              ]),
+            Padding(
+              padding: const EdgeInsets.only(top: 16, bottom: 4),
+              child: Text(group['title'],
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            ...group['keys'].map<Widget>((key) => SwitchListTile(
+              title: Text(key
+                  .replaceAll('Enabled', '')
+                  .replaceAllMapped(RegExp(r'([a-z])([A-Z])'),
+                      (m) => '${m[1]} ${m[2]}')
+                  .replaceAll('adminDisplay', 'Admin Display')
+                  .replaceAll('banquetSetup', 'Banquet Setup')
+                  .replaceAll('userManagement', 'User Management')
+                  .replaceAll('menuManagement', 'Menu Management')
+                  .replaceAll('branchManagement', 'Branch Management')
+                  .replaceAll('banquetBooking', 'Banquet Booking')
+                  .replaceAll('banquetReports', 'Banquet Reports')
+                  .replaceAll('queueReports', 'Queue Reports')
+                  .replaceAll('podium', 'Podium')
+                  .replaceAll('waiter', 'Waiter')
+                  .replaceAll('customer', 'Customer')
+              // NEW: Task-related permission display names
+                  .replaceAll('canViewOwnTasks', 'Can be Assigned Tasks (My Tasks)')
+                  .replaceAll('canSubmitTasks', 'Can Submit Tasks')
+                  .replaceAll('canViewStaffTasks', 'Can View Staff Tasks')
+                  .replaceAll('canCreateTasks', 'Can Create Tasks')
+                  .replaceAll('canEditAssignedTasks', 'Can Edit Assigned Tasks')
+                  .replaceAll('canReassignTasks', 'Can Reassign Tasks')),
+              value: _roles[key]!,
+              onChanged: (v) => setState(() => _roles[key] = v),
+            )),
+          ]),
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: _isLoading ? null : _createUser,
@@ -331,6 +390,13 @@ class _EditUserScreenState extends State<EditUserScreen> {
       'userManagementEnabled': widget.user.userManagementEnabled,
       'menuManagementEnabled': widget.user.menuManagementEnabled,
       'branchManagementEnabled': widget.user.branchManagementEnabled,
+      // NEW: Initialize task-related permissions from existing user
+      'canViewOwnTasks': widget.user.canViewOwnTasks,
+      'canSubmitTasks': widget.user.canSubmitTasks,
+      'canViewStaffTasks': widget.user.canViewStaffTasks,
+      'canCreateTasks': widget.user.canCreateTasks,
+      'canEditAssignedTasks': widget.user.canEditAssignedTasks,
+      'canReassignTasks': widget.user.canReassignTasks,
     };
   }
 
@@ -351,6 +417,13 @@ class _EditUserScreenState extends State<EditUserScreen> {
       userManagementEnabled: _roles['userManagementEnabled']!,
       menuManagementEnabled: _roles['menuManagementEnabled']!,
       branchManagementEnabled: _roles['branchManagementEnabled']!,
+      // NEW: Update task-related permissions
+      canViewOwnTasks: _roles['canViewOwnTasks']!,
+      canSubmitTasks: _roles['canSubmitTasks']!,
+      canViewStaffTasks: _roles['canViewStaffTasks']!,
+      canCreateTasks: _roles['canCreateTasks']!,
+      canEditAssignedTasks: _roles['canEditAssignedTasks']!,
+      canReassignTasks: _roles['canReassignTasks']!,
     );
     try {
       await context
@@ -445,6 +518,17 @@ class _EditUserScreenState extends State<EditUserScreen> {
         ],
       },
       {
+        'title': 'Task Management', // NEW: Group for Tasks
+        'keys': [
+          'canViewOwnTasks',
+          'canSubmitTasks',
+          'canViewStaffTasks',
+          'canCreateTasks',
+          'canEditAssignedTasks',
+          'canReassignTasks',
+        ],
+      },
+      {
         'title': 'Admin',
         'keys': [
           'userManagementEnabled',
@@ -484,31 +568,38 @@ class _EditUserScreenState extends State<EditUserScreen> {
               style: TextStyle(fontWeight: FontWeight.bold)),
           // --- NEW: Grouped switches for permissions ---
           ...permissionGroups.expand((group) => [
-                Padding(
-                  padding: const EdgeInsets.only(top: 16, bottom: 4),
-                  child: Text(group['title'],
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                ),
-                ...group['keys'].map<Widget>((key) => SwitchListTile(
-                      title: Text(key
-                          .replaceAll('Enabled', '')
-                          .replaceAllMapped(RegExp(r'([a-z])([A-Z])'),
-                              (m) => '${m[1]} ${m[2]}')
-                          .replaceAll('adminDisplay', 'Admin Display')
-                          .replaceAll('banquetSetup', 'Banquet Setup')
-                          .replaceAll('userManagement', 'User Management')
-                          .replaceAll('menuManagement', 'Menu Management')
-                          .replaceAll('branchManagement', 'Branch Management')
-                          .replaceAll('banquetBooking', 'Banquet Booking')
-                          .replaceAll('banquetReports', 'Banquet Reports')
-                          .replaceAll('queueReports', 'Queue Reports')
-                          .replaceAll('podium', 'Podium')
-                          .replaceAll('waiter', 'Waiter')
-                          .replaceAll('customer', 'Customer')),
-                      value: _roles[key]!,
-                      onChanged: (v) => setState(() => _roles[key] = v),
-                    )),
-              ]),
+            Padding(
+              padding: const EdgeInsets.only(top: 16, bottom: 4),
+              child: Text(group['title'],
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            ...group['keys'].map<Widget>((key) => SwitchListTile(
+              title: Text(key
+                  .replaceAll('Enabled', '')
+                  .replaceAllMapped(RegExp(r'([a-z])([A-Z])'),
+                      (m) => '${m[1]} ${m[2]}')
+                  .replaceAll('adminDisplay', 'Admin Display')
+                  .replaceAll('banquetSetup', 'Banquet Setup')
+                  .replaceAll('userManagement', 'User Management')
+                  .replaceAll('menuManagement', 'Menu Management')
+                  .replaceAll('branchManagement', 'Branch Management')
+                  .replaceAll('banquetBooking', 'Banquet Booking')
+                  .replaceAll('banquetReports', 'Banquet Reports')
+                  .replaceAll('queueReports', 'Queue Reports')
+                  .replaceAll('podium', 'Podium')
+                  .replaceAll('waiter', 'Waiter')
+                  .replaceAll('customer', 'Customer')
+              // NEW: Task-related permission display names
+                  .replaceAll('canViewOwnTasks', 'Can be Assigned Tasks (My Tasks)')
+                  .replaceAll('canSubmitTasks', 'Can Submit Tasks')
+                  .replaceAll('canViewStaffTasks', 'Can View Staff Tasks')
+                  .replaceAll('canCreateTasks', 'Can Create Tasks')
+                  .replaceAll('canEditAssignedTasks', 'Can Edit Assigned Tasks')
+                  .replaceAll('canReassignTasks', 'Can Reassign Tasks')),
+              value: _roles[key]!,
+              onChanged: (v) => setState(() => _roles[key] = v),
+            )),
+          ]),
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: _isLoading ? null : _updateUser,

@@ -1,1 +1,41 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"restaurantmanagementsyst-7a23c","appId":"1:683896291546:android:de9bc4464620a79ef765e3","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"restaurantmanagementsyst-7a23c","appId":"1:683896291546:ios:cc0bf82a32356782f765e3","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"macos":{"default":{"projectId":"restaurantmanagementsyst-7a23c","appId":"1:683896291546:ios:cc0bf82a32356782f765e3","uploadDebugSymbols":false,"fileOutput":"macos/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"restaurantmanagementsyst-7a23c","configurations":{"android":"1:683896291546:android:de9bc4464620a79ef765e3","ios":"1:683896291546:ios:cc0bf82a32356782f765e3","macos":"1:683896291546:ios:cc0bf82a32356782f765e3","web":"1:683896291546:web:68f7e00939e37a9cf765e3","windows":"1:683896291546:web:346955513265ff4af765e3"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "restaurantmanagementsyst-7a23c",
+          "appId": "1:683896291546:android:de9bc4464620a79ef765e3",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "restaurantmanagementsyst-7a23c",
+          "appId": "1:683896291546:ios:cc0bf82a32356782f765e3",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "macos": {
+        "default": {
+          "projectId": "restaurantmanagementsyst-7a23c",
+          "appId": "1:683896291546:ios:cc0bf82a32356782f765e3",
+          "uploadDebugSymbols": false,
+          "fileOutput": "macos/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "restaurantmanagementsyst-7a23c",
+          "configurations": {
+            "android": "1:683896291546:android:de9bc4464620a79ef765e3",
+            "ios": "1:683896291546:ios:cc0bf82a32356782f765e3",
+            "macos": "1:683896291546:ios:cc0bf82a32356782f765e3",
+            "web": "1:683896291546:web:68f7e00939e37a9cf765e3",
+            "windows": "1:683896291546:web:346955513265ff4af765e3"
+          }
+        }
+      }
+    }
+  }
+}
