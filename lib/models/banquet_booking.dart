@@ -10,6 +10,7 @@ class BanquetBooking { // No longer extends HiveObject
   String slotLabel;
   String customerName;
   String phone;
+  String? callbackComment;
   int pax;
   double amount;
   String menu;
@@ -33,6 +34,7 @@ class BanquetBooking { // No longer extends HiveObject
     required this.comments,
     this.callbackTime,
     required this.isDraft,
+    this.callbackComment
   });
 
   /// Convert to Firestore map
@@ -43,6 +45,7 @@ class BanquetBooking { // No longer extends HiveObject
       'slotLabel': slotLabel,
       'customerName': customerName,
       'phone': phone,
+      'callbackComment': callbackComment,
       'pax': pax,
       'amount': amount,
       'menu': menu,
@@ -62,6 +65,7 @@ class BanquetBooking { // No longer extends HiveObject
       slotLabel: map['slotLabel'] ?? '',
       customerName: map['customerName'] ?? '',
       phone: map['phone'] ?? '',
+      callbackComment: map['callbackComment'] ?? '',
       pax: map['pax'] ?? 0,
       amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
       menu: map['menu'] ?? '',

@@ -45,11 +45,11 @@ class _HallSlotManagementScreenState extends State<HallSlotManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
-    final isAdmin = userProvider.currentUser?.isAdmin ?? false;
+    final isCorporate = userProvider.currentUser?.branchId == 'all';
     final branches = userProvider.branches;
 
     // Set default branch for admin only once
-    if (isAdmin && _selectedBranchId == null && branches.isNotEmpty) {
+    if (isCorporate && _selectedBranchId == null && branches.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() {
@@ -59,7 +59,7 @@ class _HallSlotManagementScreenState extends State<HallSlotManagementScreen> {
           });
         }
       });
-    } else if (!isAdmin && _selectedBranchId == null) {
+    } else if (!isCorporate && _selectedBranchId == null) {
       _selectedBranchId = userProvider.currentBranchId;
     }
 
@@ -88,7 +88,7 @@ class _HallSlotManagementScreenState extends State<HallSlotManagementScreen> {
               padding: const EdgeInsets.all(16),
               child: ListView(
                 children: [
-                  if (isAdmin)
+                  if (isCorporate)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
                       child: DropdownButtonFormField<String>(

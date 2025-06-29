@@ -32,11 +32,11 @@ class _BanquetCalendarScreenState extends State<BanquetCalendarScreen> {
   @override
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
-    final isAdmin = userProvider.currentUser?.isAdmin ?? false;
+    final isCorporate = userProvider.currentUser?.branchId == 'all';
     final branches = userProvider.branches;
 
     // Set default branch for admin only once
-    if (isAdmin && _selectedBranchId == null && branches.isNotEmpty) {
+    if (isCorporate && _selectedBranchId == null && branches.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() {
@@ -46,7 +46,7 @@ class _BanquetCalendarScreenState extends State<BanquetCalendarScreen> {
           });
         }
       });
-    } else if (!isAdmin && _selectedBranchId == null) {
+    } else if (!isCorporate && _selectedBranchId == null) {
       _selectedBranchId = userProvider.currentBranchId;
     }
 
@@ -63,7 +63,7 @@ class _BanquetCalendarScreenState extends State<BanquetCalendarScreen> {
             appBar: AppBar(title: Text('Banquet Availability')),
             body: Column(
               children: [
-                if (isAdmin)
+                if (isCorporate)
                   Padding(
                     padding: const EdgeInsets.all(12.0),
                     child: DropdownButtonFormField<String>(
@@ -97,15 +97,11 @@ class _BanquetCalendarScreenState extends State<BanquetCalendarScreen> {
                     },
                     calendarBuilders: CalendarBuilders(
                       defaultBuilder: (context, day, _) {
-                        final isAvailable =
-                            _checkAnySlotAvailable(provider, day);
-                        final borderColor =
-                            isAvailable ? Colors.green : Colors.red;
-
+                        final color = _getDayBookingColor(provider, day);
                         return Container(
                           margin: EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            border: Border.all(color: borderColor, width: 2),
+                            border: Border.all(color: color, width: 2),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           alignment: Alignment.center,
@@ -180,5 +176,22 @@ class _BanquetCalendarScreenState extends State<BanquetCalendarScreen> {
         ),
       ),
     );
+  }
+
+  // Returns green if all slots free, yellow if some booked, red if all booked
+  Color _getDayBookingColor(BanquetProvider provider, DateTime date) {
+    int totalSlots = 0;
+    int bookedSlots = 0;
+    for (var hall in provider.halls) {
+      final slots = provider.getSlotsForHall(hall.name);
+      totalSlots += slots.length;
+      for (var slot in slots) {
+        if (provider.isSlotBooked(date, hall.name, slot.label)) bookedSlots++;
+      }
+    }
+    if (totalSlots == 0) return Colors.green; // No slots defined
+    if (bookedSlots == 0) return Colors.green;
+    if (bookedSlots == totalSlots) return Colors.red;
+    return Colors.yellow;
   }
 }

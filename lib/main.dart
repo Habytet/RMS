@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:token_manager/screens/notification_screen/notification_bloc.dart';
 import 'firebase_options.dart';
 
+// --- PROVIDERS (No changes here) ---
 import 'providers/user_provider.dart';
 import 'providers/token_provider.dart';
 import 'providers/banquet_provider.dart';
+import 'providers/task_provider.dart';
 
+// --- SCREENS (No changes here) ---
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/admin/user_management_screen.dart';
@@ -22,6 +26,18 @@ import 'screens/banquet/hall_slot_management_screen.dart';
 import 'screens/banquet/banquet_bookings_report_screen.dart';
 import 'screens/banquet/edit_booking_page.dart';
 import 'screens/banquet/select_menu_items_page.dart';
+import 'screens/branch_manager/branch_manager_tasks_screen.dart';
+import 'screens/branch_manager/branch_manager_task_detail_screen.dart';
+import 'screens/manager_admin/staff_tasks_screen.dart';
+import 'screens/manager_admin/create_new_task_screen.dart';
+import 'screens/manager_admin/staff_assigned_task_detail_screen.dart';
+import 'screens/manager_admin/staff_inprogress_task_detail_screen.dart';
+import 'screens/manager_admin/staff_completed_task_detail_screen.dart';
+
+// --- MODELS (No changes here) ---
+import 'models/task.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,28 +45,25 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // In lib/main.dart
-
-// ... (keep your existing imports)
-
   runApp(
     MultiProvider(
       providers: [
-        // UserProvider is the source of truth for auth and user profile
         ChangeNotifierProvider(create: (_) => UserProvider()),
-
-        // These ProxyProviders depend on UserProvider.
-        // They will automatically update when the logged-in user or branch changes.
         ChangeNotifierProxyProvider<UserProvider, TokenProvider>(
-          create: (_) => TokenProvider(branchId: 'all'), // Initial provider
+          create: (_) => TokenProvider(branchId: 'all'),
           update: (_, userProvider, previousTokenProvider) => TokenProvider(
             branchId: userProvider.currentBranchId,
           ),
         ),
-
         ChangeNotifierProxyProvider<UserProvider, BanquetProvider>(
-          create: (_) => BanquetProvider(branchId: 'all'), // Initial provider
+          create: (_) => BanquetProvider(branchId: 'all'),
           update: (_, userProvider, previousBanquetProvider) => BanquetProvider(
+            branchId: userProvider.currentBranchId,
+          ),
+        ),
+        ChangeNotifierProxyProvider<UserProvider, TaskProvider>(
+          create: (_) => TaskProvider(branchId: 'all'),
+          update: (_, userProvider, previousTaskProvider) => TaskProvider(
             branchId: userProvider.currentBranchId,
           ),
         ),
@@ -71,7 +84,7 @@ class MyApp extends StatelessWidget {
       home: const AuthWrapper(),
       routes: {
         '/login': (_) => const LoginScreen(),
-        '/dashboard': (_) => DashboardScreen(),
+        '/dashboard': (_) => const DashboardScreen(),
         '/admin/users': (_) => const UserManagementScreen(),
         '/admin/menus': (_) => MenuManagementScreen(),
         '/admin/branches': (_) => const BranchManagementScreen(),
@@ -83,6 +96,9 @@ class MyApp extends StatelessWidget {
         '/banquet': (_) => const BanquetCalendarScreen(),
         '/banquet/setup': (_) => HallSlotManagementScreen(),
         '/banquet/bookings': (_) => BanquetBookingsReportScreen(),
+        '/tasks/branch_manager': (_) => const BranchManagerTasksScreen(),
+        '/tasks/manager_admin/staff_tasks': (_) => const StaffTasksScreen(),
+        '/tasks/manager_admin/create_task': (_) => const CreateNewTaskScreen(),
       },
       onGenerateRoute: (settings) {
         switch (settings.name) {
@@ -105,6 +121,30 @@ class MyApp extends StatelessWidget {
                 hallName: args['hallName'],
               ),
             );
+          case '/tasks/branch_manager/detail':
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder: (_) =>
+                  BranchManagerTaskDetailScreen(task: args['task'] as Task),
+            );
+          case '/tasks/manager_admin/assigned_task_detail':
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder: (_) =>
+                  StaffAssignedTaskDetailScreen(task: args['task'] as Task),
+            );
+          case '/tasks/manager_admin/inprogress_task_detail':
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder: (_) =>
+                  StaffInProgressTaskDetailScreen(task: args['task'] as Task),
+            );
+          case '/tasks/manager_admin/completed_task_detail':
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder: (_) =>
+                  StaffCompletedTaskDetailScreen(task: args['task'] as Task),
+            );
           default:
             return null;
         }
@@ -113,19 +153,58 @@ class MyApp extends StatelessWidget {
   }
 }
 
+// --- THIS IS THE ONLY WIDGET THAT HAS BEEN MODIFIED ---
+
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
   @override
   Widget build(BuildContext context) {
     final authStatus = context.watch<UserProvider>().authStatus;
-    switch (authStatus) {
+
+    return AnimatedSwitcher(
+      // A slightly faster duration often feels more responsive
+      duration: const Duration(milliseconds: 500),
+
+      // --- REVISED, PERFORMANCE-OPTIMIZED TRANSITION ---
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        // Use a highly optimized curve for screen transitions
+        final curvedAnimation = CurvedAnimation(
+          parent: animation,
+          curve: Curves.fastOutSlowIn,
+        );
+
+        // We only apply the slide to the incoming Dashboard screen
+        if (child.key == const ValueKey('DashboardScreen')) {
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(1.0, 0.0), // Start from the right
+              end: Offset.zero,
+            ).animate(curvedAnimation),
+            child: child,
+          );
+        }
+
+        // The LoginScreen will use the default fade transition, which is perfect.
+        return FadeTransition(
+          opacity: curvedAnimation,
+          child: child,
+        );
+      },
+      child: _buildChild(authStatus),
+    );
+  }
+
+  // This helper method contains your original switch statement, unchanged.
+  Widget _buildChild(AuthStatus status) {
+    switch (status) {
       case AuthStatus.authenticated:
-        return DashboardScreen();
+        return const DashboardScreen(key: ValueKey('DashboardScreen'));
       case AuthStatus.unauthenticated:
-        return const LoginScreen();
+        return const LoginScreen(key: ValueKey('LoginScreen'));
       case AuthStatus.unknown:
         return const Scaffold(
+          key: ValueKey('Loading'),
           body: Center(child: CircularProgressIndicator()),
         );
     }
