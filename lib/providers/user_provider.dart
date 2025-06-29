@@ -14,6 +14,7 @@ class UserProvider extends ChangeNotifier {
 
   AppUser? _currentUser;
   String _currentBranchId = 'all';
+  String? _currentUserId;
   List<Branch> _branches = [];
   List<AppUser> _allUsers = []; // NEW: To store all fetched AppUsers
   bool _isLoadingBranches = true;
@@ -33,6 +34,7 @@ class UserProvider extends ChangeNotifier {
   bool get isLoadingUsers =>
       _isLoadingUsers; // NEW: Getter for user loading state
   AuthStatus get authStatus => _authStatus;
+  String? _fcmToken;
 
   UserProvider() {
     _authSubscription = _auth.authStateChanges().listen(_onAuthStateChanged);
@@ -51,6 +53,7 @@ class UserProvider extends ChangeNotifier {
       _currentBranchId = 'all';
       _authStatus = AuthStatus.unauthenticated;
     } else {
+      _currentUserId = user.uid;
       await _loadUserProfile(user);
       if (_currentUser != null) {
         _authStatus = AuthStatus.authenticated;
@@ -121,6 +124,15 @@ class UserProvider extends ChangeNotifier {
     });
   }
 
+  Future<void> saveFcm({required String token}) async {
+    _fcmToken = token;
+    await _firestore
+        .collection('users')
+        .doc(_currentUserId)
+        .update({'fcmToken': token});
+  }
+
+  // *** CRITICAL FIX: This function no longer logs the admin out. ***
   Future<void> addUser(String email, String password, AppUser profile) async {
     FirebaseApp tempApp = await Firebase.initializeApp(
       name: 'tempUserCreator',
@@ -155,6 +167,7 @@ class UserProvider extends ChangeNotifier {
   }
 
   Future<void> updateUser(String uid, AppUser profile) async {
+    profile.fcmToken = _fcmToken;
     await _firestore.collection('users').doc(uid).update(profile.toMap());
   }
 

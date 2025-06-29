@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:token_manager/screens/notification_screen/notification_bloc.dart';
 
 import '../../models/banquet_booking.dart';
 import '../../providers/user_provider.dart';
 import 'edit_booking_page.dart';
 
 class BanquetBookingsReportScreen extends StatefulWidget {
+  BanquetBookingsReportScreen({this.notificationBloc});
+  final NotificationBloc? notificationBloc;
   @override
   State<BanquetBookingsReportScreen> createState() =>
       _BanquetBookingsReportScreenState();
@@ -154,6 +157,7 @@ class _BanquetBookingsReportScreenState
                       booking: booking,
                       docId: docId,
                       branchId: _selectedBranchId!,
+                      notificationBloc: widget.notificationBloc,
                     ),
                   ),
                 );

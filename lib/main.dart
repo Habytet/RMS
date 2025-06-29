@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:token_manager/screens/notification_screen/notification_bloc.dart';
 import 'firebase_options.dart';
 
 // --- PROVIDERS (No changes here) ---
@@ -35,6 +36,8 @@ import 'screens/manager_admin/staff_completed_task_detail_screen.dart';
 
 // --- MODELS (No changes here) ---
 import 'models/task.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -121,22 +124,26 @@ class MyApp extends StatelessWidget {
           case '/tasks/branch_manager/detail':
             final args = settings.arguments as Map<String, dynamic>;
             return MaterialPageRoute(
-              builder: (_) => BranchManagerTaskDetailScreen(task: args['task'] as Task),
+              builder: (_) =>
+                  BranchManagerTaskDetailScreen(task: args['task'] as Task),
             );
           case '/tasks/manager_admin/assigned_task_detail':
             final args = settings.arguments as Map<String, dynamic>;
             return MaterialPageRoute(
-              builder: (_) => StaffAssignedTaskDetailScreen(task: args['task'] as Task),
+              builder: (_) =>
+                  StaffAssignedTaskDetailScreen(task: args['task'] as Task),
             );
           case '/tasks/manager_admin/inprogress_task_detail':
             final args = settings.arguments as Map<String, dynamic>;
             return MaterialPageRoute(
-              builder: (_) => StaffInProgressTaskDetailScreen(task: args['task'] as Task),
+              builder: (_) =>
+                  StaffInProgressTaskDetailScreen(task: args['task'] as Task),
             );
           case '/tasks/manager_admin/completed_task_detail':
             final args = settings.arguments as Map<String, dynamic>;
             return MaterialPageRoute(
-              builder: (_) => StaffCompletedTaskDetailScreen(task: args['task'] as Task),
+              builder: (_) =>
+                  StaffCompletedTaskDetailScreen(task: args['task'] as Task),
             );
           default:
             return null;

@@ -1,7 +1,15 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
+import 'package:token_manager/resources/app_navigator.dart';
+import 'package:token_manager/screens/banquet/banquet_bookings_report_screen.dart';
+import 'package:token_manager/screens/notification_screen/notification_bloc.dart';
+import 'package:token_manager/screens/notification_screen/notification_event.dart';
+import 'package:token_manager/screens/notification_screen/notification_screen.dart';
 import '../providers/user_provider.dart';
 import '../models/app_user.dart';
 
@@ -23,7 +31,45 @@ class _DashboardScreenState extends State<DashboardScreen>
       vsync: this,
       duration: const Duration(seconds: 15),
     )..repeat(reverse: true);
+    super.initState();
+    FirebaseMessaging.instance.getToken().then((token) {
+      print("FCM Token: $token");
+      if (token != null) {
+        saveToken(token: token);
+        _bloc.add(SetFcmTokenEvent(fcmToken: token));
+      }
+    });
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print('Received message: ${message.notification?.title}');
+      final title = message.notification?.title ?? 'No Title';
+      final body = message.notification?.body ?? 'No Body';
+
+      // Show a snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$title: $body'),
+          duration: Duration(seconds: 5),
+        ),
+      );
+    });
   }
+
+  Future<void> saveToken({required String token}) async {
+    try {
+      await context.read<UserProvider>().saveFcm(token: token);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Token saved successfully'),
+            backgroundColor: Colors.green));
+        //Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Error saving token: $e'),
+            backgroundColor: Colors.red));
+    }
 
   @override
   void dispose() {
@@ -298,5 +344,36 @@ class _DashboardScreenState extends State<DashboardScreen>
       items.add({'title': 'Branch Management', 'route': '/admin/branches'});
     }
     _openSubMenu(context, 'Admin Module', items);
+  }
+
+  void _openSubMenu(
+      BuildContext context, String title, List<Map<String, String>> items) {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => ListView(
+        shrinkWrap: true,
+        children: [
+          ListTile(
+              title: Text(title,
+                  style: const TextStyle(fontWeight: FontWeight.bold))),
+          const Divider(),
+          ...items.map((i) => ListTile(
+                title: Text(i['title']!),
+                onTap: () {
+                  Navigator.pop(context);
+                  if (i['title'] == 'View Bookings') {
+                    AppNavigator.toPush(
+                        context: context,
+                        widget: BanquetBookingsReportScreen(
+                          notificationBloc: _bloc,
+                        ));
+                  } else {
+                    Navigator.pushNamed(context, i['route']!);
+                  }
+                },
+              )),
+        ],
+      ),
+    );
   }
 }

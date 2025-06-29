@@ -17,46 +17,26 @@ class AppUser {
   final bool userManagementEnabled;
   final bool menuManagementEnabled;
   final bool branchManagementEnabled;
+  String? fcmToken;
 
-  // NEW: Task-related permissions
-  final bool _canViewOwnTasks; // Made private to override with admin check
-  final bool _canSubmitTasks; // Made private to override with admin check
-  final bool _canViewStaffTasks; // Made private to override with admin check
-  final bool _canCreateTasks; // Made private to override with admin check
-  final bool _canEditAssignedTasks; // Made private to override with admin check
-  final bool _canReassignTasks; // Made private to override with admin check
-
-
-  AppUser({
-    required this.username,
-    required this.email,
-    required this.branchId,
-    this.podiumEnabled = false,
-    this.waiterEnabled = false,
-    this.customerEnabled = false,
-    this.banquetBookingEnabled = false,
-    this.banquetReportsEnabled = false,
-    this.queueReportsEnabled = false,
-    // --- NEW: Added to constructor with a default of false ---
-    this.adminDisplayEnabled = false,
-    // --- NEW: Add to constructor ---
-    this.banquetSetupEnabled = false,
-    this.userManagementEnabled = false,
-    this.menuManagementEnabled = false,
-    this.branchManagementEnabled = false,
-    // NEW: Task-related permissions added to constructor (using private fields)
-    bool canViewOwnTasks = false,
-    bool canSubmitTasks = false,
-    bool canViewStaffTasks = false,
-    bool canCreateTasks = false,
-    bool canEditAssignedTasks = false,
-    bool canReassignTasks = false,
-  }) : _canViewOwnTasks = canViewOwnTasks,
-        _canSubmitTasks = canSubmitTasks,
-        _canViewStaffTasks = canViewStaffTasks,
-        _canCreateTasks = canCreateTasks,
-        _canEditAssignedTasks = canEditAssignedTasks,
-        _canReassignTasks = canReassignTasks;
+  AppUser(
+      {required this.username,
+      required this.email,
+      required this.branchId,
+      this.podiumEnabled = false,
+      this.waiterEnabled = false,
+      this.customerEnabled = false,
+      this.banquetBookingEnabled = false,
+      this.banquetReportsEnabled = false,
+      this.queueReportsEnabled = false,
+      // --- NEW: Added to constructor with a default of false ---
+      this.adminDisplayEnabled = false,
+      // --- NEW: Add to constructor ---
+      this.banquetSetupEnabled = false,
+      this.userManagementEnabled = false,
+      this.menuManagementEnabled = false,
+      this.branchManagementEnabled = false,
+      this.fcmToken});
 
   bool get isAdmin => username.toLowerCase() == 'admin';
 
@@ -99,6 +79,7 @@ class AppUser {
       'canCreateTasks': _canCreateTasks,
       'canEditAssignedTasks': _canEditAssignedTasks,
       'canReassignTasks': _canReassignTasks,
+      'fcmToken': fcmToken
     };
   }
 
