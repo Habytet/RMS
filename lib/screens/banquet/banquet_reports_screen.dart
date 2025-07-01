@@ -46,8 +46,8 @@ class _BanquetReportsScreenState extends State<BanquetReportsScreen> {
     for (var b in filtered) {
       sheet.appendRow([
         TextCellValue(DateFormat('yyyy-MM-dd').format(b.date)),
-        TextCellValue(b.hallName),
-        TextCellValue(b.slotLabel),
+        TextCellValue(b.hallInfos.first.name),
+        TextCellValue(b.hallInfos.first.slots.first.label),
         TextCellValue(b.customerName),
         TextCellValue(b.phone),
         TextCellValue(b.pax.toString()),
@@ -126,8 +126,8 @@ class _BanquetReportsScreenState extends State<BanquetReportsScreen> {
                 rows: filtered.map((b) {
                   return DataRow(cells: [
                     DataCell(Text(DateFormat('yyyy-MM-dd').format(b.date))),
-                    DataCell(Text(b.hallName)),
-                    DataCell(Text(b.slotLabel)),
+                    DataCell(Text(b.hallInfos.first.name)),
+                    DataCell(Text(b.hallInfos.first.slots.first.label)),
                     DataCell(Text(b.customerName)),
                     DataCell(Text(b.phone)),
                     DataCell(Text(b.pax.toString())),

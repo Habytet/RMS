@@ -4,11 +4,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 // All Hive-related code has been removed.
 
-class Slot { // No longer extends HiveObject
+class Slot {
+  // No longer extends HiveObject
   String hallName;
   String label;
+  bool isSelected;
 
-  Slot({required this.hallName, required this.label});
+  Slot({required this.hallName, required this.label, this.isSelected = false});
 
   /// Convert this Slot to a Firestore map
   Map<String, dynamic> toMap() {

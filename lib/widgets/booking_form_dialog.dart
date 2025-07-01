@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:token_manager/models/hall.dart';
 import '../models/banquet_booking.dart';
 import '../providers/banquet_provider.dart';
 
@@ -41,8 +42,9 @@ class _BookingFormDialogState extends State<BookingFormDialog> {
 
     final booking = BanquetBooking(
       date: widget.date,
-      hallName: widget.hallName,
-      slotLabel: widget.slotLabel,
+      hallInfos: <HallInfo>[],
+      // hallName: widget.hallName,
+      // slotLabel: widget.slotLabel,
       customerName: name,
       phone: phone,
       pax: pax,

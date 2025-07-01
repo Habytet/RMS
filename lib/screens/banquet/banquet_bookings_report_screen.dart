@@ -105,7 +105,7 @@ class _BanquetBookingsReportScreenState
                         final docs = snapshot.data!.docs;
                         final entries = docs
                             .map((doc) => MapEntry(
-                                doc.id, BanquetBooking.fromMap(doc.data())))
+                                doc.id, BanquetBooking.fromJson(doc.data())))
                             .toList();
 
                         final drafts =
@@ -143,7 +143,8 @@ class _BanquetBookingsReportScreenState
           margin: const EdgeInsets.all(10),
           elevation: 3,
           child: ListTile(
-            title: Text('${booking.hallName} • ${booking.slotLabel}'),
+            title: Text(
+                '${booking.hallInfos.first.name} • ${booking.hallInfos.first.slots.first.label}'),
             subtitle: Text(
               'Date: ${DateFormat('yyyy-MM-dd').format(booking.date)} — Pax: ${booking.pax}',
             ),

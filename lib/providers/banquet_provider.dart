@@ -37,17 +37,24 @@ class BanquetProvider extends ChangeNotifier {
   void _init() {
     // These listeners will now only get data for the specified branch
     _hallCol.snapshots().listen((snapshot) {
-      halls = snapshot.docs.map((doc) => Hall.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      halls = snapshot.docs
+          .map((doc) => Hall.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
       notifyListeners();
     });
 
     _slotCol.snapshots().listen((snapshot) {
-      slots = snapshot.docs.map((doc) => Slot.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      slots = snapshot.docs
+          .map((doc) => Slot.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
       notifyListeners();
     });
 
     _bookingCol.snapshots().listen((snapshot) {
-      bookings = snapshot.docs.map((doc) => BanquetBooking.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      bookings = snapshot.docs
+          .map((doc) =>
+              BanquetBooking.fromJson(doc.data() as Map<String, dynamic>))
+          .toList();
       notifyListeners();
     });
   }
@@ -62,7 +69,8 @@ class BanquetProvider extends ChangeNotifier {
 
   Future<void> removeHall(String name) async {
     await _hallCol.doc(name).delete();
-    final relatedSlots = await _slotCol.where('hallName', isEqualTo: name).get();
+    final relatedSlots =
+        await _slotCol.where('hallName', isEqualTo: name).get();
     for (var doc in relatedSlots.docs) {
       await _slotCol.doc(doc.id).delete();
     }
@@ -100,17 +108,28 @@ class BanquetProvider extends ChangeNotifier {
     return bookings.any((b) {
       final bd = b.date;
       final bdDay = DateTime(bd.year, bd.month, bd.day);
-      return bdDay == DateTime(date.year, date.month, date.day) &&
-          b.hallName == hallName &&
-          b.slotLabel == slotLabel;
+      final isMatched = bdDay == DateTime(date.year, date.month, date.day);
+      if (!isMatched) {
+        return false;
+      }
+      for (final HallInfo info in b.hallInfos) {
+        if (info.name == hallName) {
+          for (final Slot slot in info.slots) {
+            if (slot == slotLabel) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
     });
   }
 
   Future<void> createBooking(BanquetBooking booking) async {
-    await _bookingCol.add(booking.toMap());
+    await _bookingCol.add(booking.toJson());
   }
 
   Future<void> updateBooking(String docId, BanquetBooking booking) async {
-    await _bookingCol.doc(docId).update(booking.toMap());
+    await _bookingCol.doc(docId).update(booking.toJson());
   }
 }

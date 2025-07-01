@@ -1,27 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:hive/hive.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:token_manager/screens/banquet/banquet_bloc.dart';
+import 'package:token_manager/screens/banquet/banquet_event.dart';
+import 'package:token_manager/screens/banquet/banquet_state.dart';
 
 import '../../models/banquet_booking.dart';
 import '../../models/menu.dart';
 import '../../providers/banquet_provider.dart';
 import 'select_menu_items_page.dart';
-import 'banquet_calendar_screen.dart';
 
 class BookingPage extends StatefulWidget {
   DateTime date;
-  String hallName;
-  String slotLabel;
   String branchId;
+  BanquetBloc banquetBloc;
+  BanquetProvider provider;
 
-  BookingPage({
-    required this.date,
-    required this.hallName,
-    required this.slotLabel,
-    required this.branchId,
-  });
+  BookingPage(
+      {required this.date,
+      required this.branchId,
+      required this.banquetBloc,
+      required this.provider});
 
   @override
   State<BookingPage> createState() => _BookingPageState();
@@ -41,13 +41,50 @@ class _BookingPageState extends State<BookingPage> {
   Menu? _selectedMenu;
   Map<String, Set<String>> _selectedItems = {};
 
-  CollectionReference getMenusCollection() {
-    return FirebaseFirestore.instance
-        .collection('branches')
-        .doc(widget.branchId)
-        .collection('halls')
-        .doc(widget.hallName)
-        .collection('menus');
+  // CollectionReference getMenusCollection() {
+  //   return FirebaseFirestore.instance
+  //       .collection('branches')
+  //       .doc(widget.branchId)
+  //       .collection('halls')
+  //       .doc(widget.hallName)
+  //       .collection('menus');
+  // }
+
+  Future<List<Map<String, dynamic>>> fetchMenusAcrossHalls() async {
+    final selectedHalls = widget.banquetBloc.selectedHalls;
+    final branchId = widget.branchId;
+
+    List<Map<String, dynamic>> allMenus = [];
+
+    for (final hall in selectedHalls) {
+      final collection = FirebaseFirestore.instance
+          .collection('branches')
+          .doc(branchId)
+          .collection('halls')
+          .doc(hall.name)
+          .collection('menus');
+
+      final snapshot = await collection.get();
+
+      allMenus.addAll(snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['hallName'] = hall.name; // Add context
+        return data;
+      }));
+    }
+
+    return allMenus;
+  }
+
+
+  List<Map<String, dynamic>> menusUpdated = <Map<String, dynamic>>[];
+  @override
+  void initState() {
+    super.initState();
+    fetchMenusAcrossHalls().then((value) {
+      menusUpdated = value;
+      setState(() {});
+    });
   }
 
   void _updateRemaining() {
@@ -73,20 +110,18 @@ class _BookingPageState extends State<BookingPage> {
             .join();
 
     final booking = BanquetBooking(
-      date: widget.date,
-      hallName: widget.hallName,
-      slotLabel: widget.slotLabel,
-      customerName: name,
-      phone: phone,
-      pax: pax,
-      amount: received,
-      totalAmount: _totalAmount,
-      remainingAmount: _remaining,
-      comments: comments,
-      callbackTime: _callbackTime,
-      menu: menuString,
-      isDraft: isDraft,
-    );
+        date: widget.date,
+        customerName: name,
+        phone: phone,
+        pax: pax,
+        amount: received,
+        totalAmount: _totalAmount,
+        remainingAmount: _remaining,
+        comments: comments,
+        callbackTime: _callbackTime,
+        menu: menuString,
+        isDraft: isDraft,
+        hallInfos: widget.banquetBloc.selectedHalls);
 
     // Use a BanquetProvider for the correct branch
     final provider = BanquetProvider(branchId: widget.branchId);
@@ -97,11 +132,9 @@ class _BookingPageState extends State<BookingPage> {
   @override
   Widget build(BuildContext context) {
     // Fetch menus for the correct branch/hall
-    final menusCollection = getMenusCollection();
 
     return Scaffold(
-      appBar: AppBar(
-          title: Text('Booking for ${widget.hallName} - ${widget.slotLabel}')),
+      appBar: AppBar(title: Text('Booking')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: ListView(
@@ -109,27 +142,15 @@ class _BookingPageState extends State<BookingPage> {
             ElevatedButton.icon(
               icon: Icon(Icons.edit_calendar),
               label: Text("Change Date / Hall / Slot"),
-              onPressed: () async {
-                final result = await Navigator.push<Map<String, dynamic>>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        BanquetCalendarScreen(initialDate: widget.date),
-                  ),
-                );
-                if (result != null) {
-                  setState(() {
-                    widget.date = result['date'];
-                    widget.hallName = result['hallName'];
-                    widget.slotLabel = result['slotLabel'];
-                    widget.branchId = result['branchId'] ?? widget.branchId;
-                  });
-                }
-              },
+              onPressed: () async {},
             ),
             Text('Date: ${DateFormat('yyyy-MM-dd').format(widget.date)}'),
-            Text('Hall: ${widget.hallName}'),
-            Text('Slot: ${widget.slotLabel}'),
+            Text(widget.banquetBloc.selectedHallSlot()),
+            OutlinedButton(
+              onPressed: () => _openAvailabilityPopup(
+                  context, DateTime.now(), widget.provider),
+              child: Text('Add Extra Hall/Slot'),
+            ),
             SizedBox(height: 12),
             TextField(
                 controller: _nameController,
@@ -198,110 +219,71 @@ class _BookingPageState extends State<BookingPage> {
               },
             ),
             SizedBox(height: 12),
-            StreamBuilder<QuerySnapshot>(
-              stream: menusCollection.snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return const Text('Error loading menus.');
-                }
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const CircularProgressIndicator();
-                }
-                final menus = snapshot.data!.docs
-                    .map((doc) =>
-                        Menu.fromMap(doc.data() as Map<String, dynamic>))
-                    .toList();
-                if (menus.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Text(
-                      'No menus found. Please create one from Menu Management.',
-                      style: TextStyle(color: Colors.redAccent),
-                    ),
-                  );
-                }
-                // If the selected menu is no longer in the list, clear it (avoid setState in build)
-                if (_selectedMenu != null &&
-                    !menus.any((m) => m.name == _selectedMenu!.name)) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) setState(() => _selectedMenu = null);
-                  });
-                }
-                // Fix: Safely get the selected menu for the dropdown value
-                Menu? selectedMenu;
-                try {
-                  selectedMenu =
-                      menus.firstWhere((m) => m.name == _selectedMenu?.name);
-                } catch (_) {
-                  selectedMenu = null;
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    DropdownButton<Menu>(
-                      value: selectedMenu,
-                      hint: Text('Select Menu'),
-                      isExpanded: true,
-                      items: menus.map((menu) {
-                        return DropdownMenuItem<Menu>(
-                          value: menu,
-                          child: Text('${menu.name} - ₹${menu.price}+tax'),
-                        );
-                      }).toList(),
-                      onChanged: (menu) {
-                        setState(() {
-                          _selectedMenu = menu;
-                          _selectedItems = {};
-                        });
-                      },
-                    ),
-                    if (_selectedMenu != null) ...[
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text('Menu selected: ${_selectedMenu!.name}'),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButton<Map<String, dynamic>>(
+                  value: null,
+                  hint: Text('Select Menu'),
+                  isExpanded: true,
+                  items: menusUpdated.map((menu) {
+                    return DropdownMenuItem<Map<String, dynamic>>(
+                      value: menu,
+                      child: Text('${menu['name']} - ₹${menu['price']}+tax'),
+                    );
+                  }).toList(),
+                  onChanged: (menu) {
+                    // setState(() {
+                    //   _selectedMenu = menu;
+                    //   _selectedItems = {};
+                    // });
+                  },
+                ),
+                if (_selectedMenu != null) ...[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Menu selected: ${_selectedMenu!.name}'),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    icon: Icon(Icons.edit),
+                    label: Text('Edit Menu'),
+                    onPressed: () async {
+                      // final updated =
+                      //     await Navigator.push<Map<String, Set<String>>>(
+                      //   context,
+                      //   MaterialPageRoute(
+                      //     builder: (_) => SelectMenuItemsPage(
+                      //       menu: _selectedMenu!,
+                      //       initialSelections: _selectedItems,
+                      //       branchId: widget.branchId,
+                      //       hallName: widget.hallName,
+                      //     ),
+                      //   ),
+                      // );
+                      // if (updated != null) {
+                      //   setState(() {
+                      //     _selectedItems = updated;
+                      //   });
+                      // }
+                    },
+                  ),
+                  if (_selectedItems.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Selected Items:',
+                              style:
+                              TextStyle(fontWeight: FontWeight.bold)),
+                          ..._selectedItems.entries.map((e) =>
+                              Text('${e.key}: ${e.value.join(", ")}')),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      ElevatedButton.icon(
-                        icon: Icon(Icons.edit),
-                        label: Text('Edit Menu'),
-                        onPressed: () async {
-                          final updated =
-                              await Navigator.push<Map<String, Set<String>>>(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => SelectMenuItemsPage(
-                                menu: _selectedMenu!,
-                                initialSelections: _selectedItems,
-                                branchId: widget.branchId,
-                                hallName: widget.hallName,
-                              ),
-                            ),
-                          );
-                          if (updated != null) {
-                            setState(() {
-                              _selectedItems = updated;
-                            });
-                          }
-                        },
-                      ),
-                      if (_selectedItems.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Selected Items:',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
-                              ..._selectedItems.entries.map((e) =>
-                                  Text('${e.key}: ${e.value.join(", ")}')),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ],
-                );
-              },
+                    ),
+                ],
+              ],
             ),
             SizedBox(height: 24),
             Row(
@@ -324,6 +306,79 @@ class _BookingPageState extends State<BookingPage> {
           ],
         ),
       ),
+    );
+  }
+
+  void _openAvailabilityPopup(
+      BuildContext context, DateTime date, BanquetProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return BlocBuilder(
+          bloc: widget.banquetBloc,
+          buildWhen: (preState, currState) =>
+              currState is RefreshBottomSheetState,
+          builder: (context, state) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 12,
+                left: 16,
+                right: 16,
+                top: 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: provider.halls.map((hall) {
+                          final slots = provider.getSlotsForHall(hall.name);
+                          return ExpansionTile(
+                            title: Text(hall.name),
+                            children: slots.map((slot) {
+                              final booked = provider.isSlotBooked(
+                                  date, hall.name, slot.label);
+                              return ListTile(
+                                title: Text(slot.label),
+                                trailing: booked
+                                    ? Text('Booked',
+                                        style: TextStyle(color: Colors.red))
+                                    : ElevatedButton(
+                                        child: widget.banquetBloc
+                                                .isSelectedSlots(
+                                                    hallName: hall.name,
+                                                    slot: slot.label)
+                                            ? Text('Selected')
+                                            : Text('Select'),
+                                        onPressed: () => widget.banquetBloc.add(
+                                            SelectHallSlotEvent(
+                                                hallName: hall.name,
+                                                slotName: slot.label)),
+                                      ),
+                              );
+                            }).toList(),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {});
+                      Navigator.pop(context); // Close the bottom sheet
+                    },
+                    child: const Text("Submit"),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

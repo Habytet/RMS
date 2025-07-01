@@ -1,13 +1,12 @@
 // lib/models/banquet_booking.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:token_manager/models/hall.dart';
 
 // All Hive-related code has been removed.
 
-class BanquetBooking { // No longer extends HiveObject
+class BanquetBooking {
   DateTime date;
-  String hallName;
-  String slotLabel;
   String customerName;
   String phone;
   String? callbackComment;
@@ -19,13 +18,13 @@ class BanquetBooking { // No longer extends HiveObject
   String comments;
   DateTime? callbackTime;
   bool isDraft;
+  List<HallInfo> hallInfos;
 
   BanquetBooking({
     required this.date,
-    required this.hallName,
-    required this.slotLabel,
     required this.customerName,
     required this.phone,
+    this.callbackComment,
     required this.pax,
     required this.amount,
     required this.menu,
@@ -34,15 +33,37 @@ class BanquetBooking { // No longer extends HiveObject
     required this.comments,
     this.callbackTime,
     required this.isDraft,
-    this.callbackComment
+    required this.hallInfos,
   });
 
-  /// Convert to Firestore map
-  Map<String, dynamic> toMap() {
+  factory BanquetBooking.fromJson(Map<String, dynamic> json) {
+    return BanquetBooking(
+        date: json['date'] != null
+            ? (json['date'] as Timestamp).toDate()
+            : DateTime.now(),
+      //date: DateTime.parse(json['date']),
+      customerName: json['customerName'],
+      phone: json['phone'],
+      callbackComment: json['callbackComment'],
+      pax: json['pax'],
+      amount: (json['amount'] as num).toDouble(),
+      menu: json['menu'],
+      totalAmount: (json['totalAmount'] as num).toDouble(),
+      remainingAmount: (json['remainingAmount'] as num).toDouble(),
+      comments: json['comments'],
+      callbackTime: json['callbackTime'] != null
+          ? (json['date'] as Timestamp).toDate()
+          : null,
+      isDraft: json['isDraft'],
+      hallInfos: json['hallInfos'] != null ? (json['hallInfos'] as List)
+          .map((h) => HallInfo.fromJson(h))
+          .toList() : <HallInfo>[],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
     return {
       'date': Timestamp.fromDate(date),
-      'hallName': hallName,
-      'slotLabel': slotLabel,
       'customerName': customerName,
       'phone': phone,
       'callbackComment': callbackComment,
@@ -54,26 +75,8 @@ class BanquetBooking { // No longer extends HiveObject
       'comments': comments,
       'callbackTime': callbackTime != null ? Timestamp.fromDate(callbackTime!) : null,
       'isDraft': isDraft,
+      'hallInfos': hallInfos.map((h) => h.toJson()).toList(),
     };
   }
-
-  /// Create from Firestore map
-  factory BanquetBooking.fromMap(Map<String, dynamic> map) {
-    return BanquetBooking(
-      date: (map['date'] as Timestamp).toDate(),
-      hallName: map['hallName'] ?? '',
-      slotLabel: map['slotLabel'] ?? '',
-      customerName: map['customerName'] ?? '',
-      phone: map['phone'] ?? '',
-      callbackComment: map['callbackComment'] ?? '',
-      pax: map['pax'] ?? 0,
-      amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
-      menu: map['menu'] ?? '',
-      totalAmount: (map['totalAmount'] as num?)?.toDouble() ?? 0.0,
-      remainingAmount: (map['remainingAmount'] as num?)?.toDouble() ?? 0.0,
-      comments: map['comments'] ?? '',
-      callbackTime: map['callbackTime'] != null ? (map['callbackTime'] as Timestamp).toDate() : null,
-      isDraft: map['isDraft'] ?? false,
-    );
-  }
 }
+

@@ -51,7 +51,7 @@ class _EditBookingPageState extends State<EditBookingPage>
         .collection('branches')
         .doc(widget.branchId)
         .collection('halls')
-        .doc(widget.booking.hallName)
+        .doc(widget.booking.hallInfos.first.name)
         .collection('menus')
         .get();
     return snapshot.docs.map((doc) => Menu.fromMap(doc.data())).toList();
@@ -155,8 +155,8 @@ class _EditBookingPageState extends State<EditBookingPage>
           children: [
             Text(
                 'Date: ${DateFormat('yyyy-MM-dd').format(widget.booking.date)}'),
-            Text('Hall: ${widget.booking.hallName}'),
-            Text('Slot: ${widget.booking.slotLabel}'),
+            Text('Hall: ${widget.booking.hallInfos.first.name}'),
+            Text('Slot: ${widget.booking.hallInfos.first.slots.first.label}'),
             ElevatedButton.icon(
               icon: Icon(Icons.edit_calendar),
               label: Text("Change Date / Hall / Slot"),
@@ -171,8 +171,8 @@ class _EditBookingPageState extends State<EditBookingPage>
                 if (result != null) {
                   setState(() {
                     widget.booking.date = result['date'];
-                    widget.booking.hallName = result['hallName'];
-                    widget.booking.slotLabel = result['slotLabel'];
+                   // widget.booking.hallName = result['hallName'];
+                    //widget.booking.slotLabel = result['slotLabel'];
                   });
                 }
               },
@@ -319,23 +319,23 @@ class _EditBookingPageState extends State<EditBookingPage>
                         icon: Icon(Icons.edit),
                         label: Text('Edit Menu Selections'),
                         onPressed: () async {
-                          final updated =
-                              await Navigator.push<Map<String, Set<String>>>(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => SelectMenuItemsPage(
-                                menu: _selectedMenu!,
-                                initialSelections: _selectedItems,
-                                branchId: widget.branchId,
-                                hallName: widget.booking.hallName,
-                              ),
-                            ),
-                          );
-                          if (updated != null) {
-                            setState(() {
-                              _selectedItems = updated;
-                            });
-                          }
+                          // final updated =
+                          //     await Navigator.push<Map<String, Set<String>>>(
+                          //   context,
+                          //   MaterialPageRoute(
+                          //     builder: (_) => SelectMenuItemsPage(
+                          //       menu: _selectedMenu!,
+                          //       initialSelections: _selectedItems,
+                          //       branchId: widget.branchId,
+                          //       hallName: widget.booking.hallName,
+                          //     ),
+                          //   ),
+                          // );
+                          // if (updated != null) {
+                          //   setState(() {
+                          //     _selectedItems = updated;
+                          //   });
+                          // }
                         },
                       )
                   ],
