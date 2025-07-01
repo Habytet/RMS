@@ -6,7 +6,6 @@ import '../../models/menu.dart';
 import '../../models/menu_category.dart';
 import '../../models/menu_item.dart';
 import '../../providers/user_provider.dart';
-import '../../models/hall.dart';
 import 'package:provider/provider.dart';
 
 // --- Screen 1: Shows the list of all main menus ---
@@ -17,41 +16,18 @@ class MenuManagementScreen extends StatefulWidget {
 
 class _MenuManagementScreenState extends State<MenuManagementScreen> {
   String? _selectedBranchId;
-  String? _selectedHallId;
-  List<Hall> _halls = [];
   final _menuNameController = TextEditingController();
   final _menuPriceController = TextEditingController();
 
   CollectionReference getMenusCollection() {
-    if (_selectedBranchId != null && _selectedHallId != null) {
+    if (_selectedBranchId != null) {
       return FirebaseFirestore.instance
           .collection('branches')
           .doc(_selectedBranchId)
-          .collection('halls')
-          .doc(_selectedHallId)
           .collection('menus');
     }
     // fallback to a dummy collection
     return FirebaseFirestore.instance.collection('dummy');
-  }
-
-  Future<void> _fetchHalls() async {
-    if (_selectedBranchId == null) return;
-    final hallsSnapshot = await FirebaseFirestore.instance
-        .collection('branches')
-        .doc(_selectedBranchId)
-        .collection('halls')
-        .get();
-    setState(() {
-      _halls = hallsSnapshot.docs
-          .map((doc) => Hall.fromMap(doc.data() as Map<String, dynamic>))
-          .toList();
-      if (_halls.isNotEmpty &&
-          (_selectedHallId == null ||
-              !_halls.any((h) => h.name == _selectedHallId))) {
-        _selectedHallId = _halls.first.name;
-      }
-    });
   }
 
   @override
@@ -59,6 +35,142 @@ class _MenuManagementScreenState extends State<MenuManagementScreen> {
     _menuNameController.dispose();
     _menuPriceController.dispose();
     super.dispose();
+  }
+
+  void _showMigrationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Migrate Hall Menus'),
+        content: Text(
+          'This will move all existing menus from individual halls to the branch level. '
+          'This action cannot be undone. Continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _migrateHallMenusToBranch();
+            },
+            child: Text('Migrate'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _migrateHallMenusToBranch() async {
+    if (_selectedBranchId == null) return;
+
+    try {
+      // Show progress dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Migrating menus...'),
+            ],
+          ),
+        ),
+      );
+
+      // Get all halls in the branch
+      final hallsSnapshot = await FirebaseFirestore.instance
+          .collection('branches')
+          .doc(_selectedBranchId)
+          .collection('halls')
+          .get();
+
+      final branchMenusCollection = FirebaseFirestore.instance
+          .collection('branches')
+          .doc(_selectedBranchId)
+          .collection('menus');
+
+      // Track migrated menus to avoid duplicates
+      Set<String> migratedMenuNames = {};
+
+      for (var hallDoc in hallsSnapshot.docs) {
+        final hallName = hallDoc.id;
+        final hallMenusCollection = FirebaseFirestore.instance
+            .collection('branches')
+            .doc(_selectedBranchId)
+            .collection('halls')
+            .doc(hallName)
+            .collection('menus');
+
+        // Get all menus in this hall
+        final menusSnapshot = await hallMenusCollection.get();
+
+        for (var menuDoc in menusSnapshot.docs) {
+          final menuData = menuDoc.data();
+          final menuName = menuDoc.id;
+
+          // Skip if already migrated
+          if (migratedMenuNames.contains(menuName)) continue;
+
+          // Migrate menu to branch level
+          await branchMenusCollection.doc(menuName).set(menuData);
+
+          // Migrate categories
+          final categoriesSnapshot = await hallMenusCollection
+              .doc(menuName)
+              .collection('categories')
+              .get();
+
+          for (var categoryDoc in categoriesSnapshot.docs) {
+            await branchMenusCollection
+                .doc(menuName)
+                .collection('categories')
+                .doc(categoryDoc.id)
+                .set(categoryDoc.data());
+          }
+
+          // Migrate items
+          final itemsSnapshot =
+              await hallMenusCollection.doc(menuName).collection('items').get();
+
+          for (var itemDoc in itemsSnapshot.docs) {
+            await branchMenusCollection
+                .doc(menuName)
+                .collection('items')
+                .add(itemDoc.data());
+          }
+
+          migratedMenuNames.add(menuName);
+        }
+      }
+
+      // Close progress dialog
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Successfully migrated ${migratedMenuNames.length} menus to branch level'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      // Close progress dialog
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Migration failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -76,18 +188,10 @@ class _MenuManagementScreenState extends State<MenuManagementScreen> {
                 .firstWhere((b) => b.id != 'all', orElse: () => branches.first)
                 .id;
           });
-          _fetchHalls();
         }
       });
     } else if (!isCorporate && _selectedBranchId == null) {
       _selectedBranchId = userProvider.currentBranchId;
-      _fetchHalls();
-    }
-
-    // Fetch halls when branch changes
-    if (_selectedBranchId != null &&
-        (_halls.isEmpty || !_halls.any((h) => h.name == _selectedHallId))) {
-      _fetchHalls();
     }
 
     final menusCollection = getMenusCollection();
@@ -137,15 +241,24 @@ class _MenuManagementScreenState extends State<MenuManagementScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-            builder: (_) => MenuDetailScreen(
-                menu: menu,
-                branchId: _selectedBranchId!,
-                hallId: _selectedHallId!)),
+            builder: (_) =>
+                MenuDetailScreen(menu: menu, branchId: _selectedBranchId!)),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Menu Management')),
+      appBar: AppBar(
+        title: const Text('Menu Management'),
+        actions: [
+          // Add migration button for existing users
+          if (_selectedBranchId != null)
+            IconButton(
+              icon: Icon(Icons.sync),
+              tooltip: 'Migrate Hall Menus to Branch',
+              onPressed: () => _showMigrationDialog(context),
+            ),
+        ],
+      ),
       body: Column(
         children: [
           if (isCorporate)
@@ -162,34 +275,13 @@ class _MenuManagementScreenState extends State<MenuManagementScreen> {
                 onChanged: (value) {
                   setState(() {
                     _selectedBranchId = value;
-                    _selectedHallId = null;
-                    _halls = [];
-                  });
-                  _fetchHalls();
-                },
-              ),
-            ),
-          if (_halls.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: DropdownButtonFormField<String>(
-                value: _selectedHallId,
-                decoration: const InputDecoration(
-                    labelText: 'Select Hall', border: OutlineInputBorder()),
-                items: [
-                  ..._halls.map((h) =>
-                      DropdownMenuItem(value: h.name, child: Text(h.name))),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _selectedHallId = value;
                   });
                 },
               ),
             ),
           Expanded(
-            child: (_selectedBranchId == null || _selectedHallId == null)
-                ? const Center(child: Text('Please select a branch and hall.'))
+            child: (_selectedBranchId == null)
+                ? const Center(child: Text('Please select a branch.'))
                 : StreamBuilder<QuerySnapshot>(
                     stream: menusCollection.snapshots(),
                     builder: (context, snapshot) {
@@ -221,14 +313,13 @@ class _MenuManagementScreenState extends State<MenuManagementScreen> {
           ),
         ],
       ),
-      floatingActionButton:
-          (_selectedBranchId != null && _selectedHallId != null)
-              ? FloatingActionButton(
-                  onPressed: _addMenu,
-                  child: const Icon(Icons.add),
-                  tooltip: 'Add Menu',
-                )
-              : null,
+      floatingActionButton: (_selectedBranchId != null)
+          ? FloatingActionButton(
+              onPressed: _addMenu,
+              child: const Icon(Icons.add),
+              tooltip: 'Add Menu',
+            )
+          : null,
     );
   }
 }
@@ -237,12 +328,9 @@ class _MenuManagementScreenState extends State<MenuManagementScreen> {
 class MenuDetailScreen extends StatefulWidget {
   final Menu menu;
   final String branchId;
-  final String hallId;
+
   const MenuDetailScreen(
-      {super.key,
-      required this.menu,
-      required this.branchId,
-      required this.hallId});
+      {super.key, required this.menu, required this.branchId});
 
   @override
   State<MenuDetailScreen> createState() => _MenuDetailScreenState();
@@ -252,8 +340,6 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
   CollectionReference get categoriesCollection => FirebaseFirestore.instance
       .collection('branches')
       .doc(widget.branchId)
-      .collection('halls')
-      .doc(widget.hallId)
       .collection('menus')
       .doc(widget.menu.name)
       .collection('categories');
@@ -261,8 +347,6 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
   CollectionReference get itemsCollection => FirebaseFirestore.instance
       .collection('branches')
       .doc(widget.branchId)
-      .collection('halls')
-      .doc(widget.hallId)
       .collection('menus')
       .doc(widget.menu.name)
       .collection('items');

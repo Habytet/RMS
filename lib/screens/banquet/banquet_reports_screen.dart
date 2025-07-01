@@ -46,7 +46,9 @@ class _BanquetReportsScreenState extends State<BanquetReportsScreen> {
     for (var b in filtered) {
       sheet.appendRow([
         TextCellValue(DateFormat('yyyy-MM-dd').format(b.date)),
-        TextCellValue(b.hallName),
+        TextCellValue(b.hallSlots
+            .map((hs) => '${hs['hallName']} - ${hs['slotLabel']}')
+            .join(", ")),
         TextCellValue(b.slotLabel),
         TextCellValue(b.customerName),
         TextCellValue(b.phone),
@@ -58,10 +60,12 @@ class _BanquetReportsScreenState extends State<BanquetReportsScreen> {
 
     final bytes = excel.encode()!;
     final dir = await getExternalStorageDirectory();
-    final file = File('${dir!.path}/banquet_report_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.xlsx');
+    final file = File(
+        '${dir!.path}/banquet_report_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.xlsx');
     await file.writeAsBytes(bytes);
 
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Exported to ${file.path}')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('Exported to ${file.path}')));
   }
 
   Future<void> _pickDate(bool isFrom) async {
@@ -74,8 +78,10 @@ class _BanquetReportsScreenState extends State<BanquetReportsScreen> {
     );
     if (picked != null) {
       setState(() {
-        if (isFrom) fromDate = picked;
-        else toDate = picked;
+        if (isFrom)
+          fromDate = picked;
+        else
+          toDate = picked;
       });
       _filterData();
     }
@@ -103,9 +109,13 @@ class _BanquetReportsScreenState extends State<BanquetReportsScreen> {
             padding: EdgeInsets.all(8),
             child: Row(
               children: [
-                Expanded(child: _dateFilterBtn('From', fromDate, () => _pickDate(true))),
+                Expanded(
+                    child: _dateFilterBtn(
+                        'From', fromDate, () => _pickDate(true))),
                 SizedBox(width: 10),
-                Expanded(child: _dateFilterBtn('To', toDate, () => _pickDate(false))),
+                Expanded(
+                    child:
+                        _dateFilterBtn('To', toDate, () => _pickDate(false))),
               ],
             ),
           ),
@@ -126,7 +136,9 @@ class _BanquetReportsScreenState extends State<BanquetReportsScreen> {
                 rows: filtered.map((b) {
                   return DataRow(cells: [
                     DataCell(Text(DateFormat('yyyy-MM-dd').format(b.date))),
-                    DataCell(Text(b.hallName)),
+                    DataCell(Text(b.hallSlots
+                        .map((hs) => '${hs['hallName']} - ${hs['slotLabel']}')
+                        .join(", "))),
                     DataCell(Text(b.slotLabel)),
                     DataCell(Text(b.customerName)),
                     DataCell(Text(b.phone)),

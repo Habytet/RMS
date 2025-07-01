@@ -49,6 +49,7 @@ class DashboardScreen extends StatelessWidget {
             if (user.banquetBookingEnabled ||
                 user.banquetSetupEnabled ||
                 user.banquetReportsEnabled ||
+                user.chefDisplayEnabled ||
                 user.isAdmin)
               _moduleCard(context, 'Banquet', Icons.apartment, () {
                 _openBanquetModule(context, user);
@@ -63,6 +64,11 @@ class DashboardScreen extends StatelessWidget {
                 user.isAdmin)
               _moduleCard(context, 'Reports', Icons.bar_chart, () {
                 _openReportsModule(context, user);
+              }),
+            // NEW: Notifications Module Card
+            if (user.isAdmin || user.canViewStaffTasks)
+              _moduleCard(context, 'Notifications', Icons.notifications, () {
+                _openNotificationsModule(context, user);
               }),
             if (user.userManagementEnabled ||
                 user.menuManagementEnabled ||
@@ -119,6 +125,8 @@ class DashboardScreen extends StatelessWidget {
       items.add({'title': 'Banquet Setup', 'route': '/banquet/setup'});
     if (user.banquetReportsEnabled || user.isAdmin)
       items.add({'title': 'View Bookings', 'route': '/banquet/bookings'});
+    if (user.chefDisplayEnabled || user.isAdmin)
+      items.add({'title': 'Chef Display', 'route': '/banquet/chef_display'});
     _openSubMenu(context, 'Banquet Module', items);
   }
 
@@ -149,6 +157,13 @@ class DashboardScreen extends StatelessWidget {
     // if (user.banquetReportsEnabled || user.isAdmin)
     //   items.add({'title': 'Banquet Reports', 'route': '/banquet/reports'});
     _openSubMenu(context, 'Reports', items);
+  }
+
+  void _openNotificationsModule(BuildContext context, AppUser user) {
+    final items = <Map<String, String>>[];
+    if (user.isAdmin || user.canViewStaffTasks)
+      items.add({'title': 'Notifications', 'route': '/notifications'});
+    _openSubMenu(context, 'Notifications', items);
   }
 
   void _openAdminModule(BuildContext context, AppUser user) {

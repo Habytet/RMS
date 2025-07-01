@@ -14,6 +14,8 @@ class AppUser {
   final bool adminDisplayEnabled;
   // --- NEW: Admin and Banquet Setup Permissions ---
   final bool banquetSetupEnabled;
+  // --- NEW: Chef Display Permission ---
+  final bool chefDisplayEnabled;
   final bool userManagementEnabled;
   final bool menuManagementEnabled;
   final bool branchManagementEnabled;
@@ -40,6 +42,8 @@ class AppUser {
       this.adminDisplayEnabled = false,
       // --- NEW: Add to constructor ---
       this.banquetSetupEnabled = false,
+      // --- NEW: Chef Display Permission ---
+      this.chefDisplayEnabled = false,
       this.userManagementEnabled = false,
       this.menuManagementEnabled = false,
       this.branchManagementEnabled = false,
@@ -83,6 +87,8 @@ class AppUser {
       'adminDisplayEnabled': adminDisplayEnabled,
       // --- NEW: Add to map ---
       'banquetSetupEnabled': banquetSetupEnabled,
+      // --- NEW: Chef Display Permission ---
+      'chefDisplayEnabled': chefDisplayEnabled,
       'userManagementEnabled': userManagementEnabled,
       'menuManagementEnabled': menuManagementEnabled,
       'branchManagementEnabled': branchManagementEnabled,
@@ -112,6 +118,8 @@ class AppUser {
       adminDisplayEnabled: map['adminDisplayEnabled'] ?? false,
       // --- NEW: Read from map ---
       banquetSetupEnabled: map['banquetSetupEnabled'] ?? false,
+      // --- NEW: Chef Display Permission ---
+      chefDisplayEnabled: map['chefDisplayEnabled'] ?? false,
       userManagementEnabled: map['userManagementEnabled'] ?? false,
       menuManagementEnabled: map['menuManagementEnabled'] ?? false,
       branchManagementEnabled: map['branchManagementEnabled'] ?? false,

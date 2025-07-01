@@ -9,13 +9,11 @@ class SelectMenuItemsPage extends StatefulWidget {
   final Menu menu;
   final Map<String, Set<String>> initialSelections;
   final String branchId;
-  final String hallName;
 
   SelectMenuItemsPage({
     required this.menu,
     required this.initialSelections,
     required this.branchId,
-    required this.hallName,
   });
 
   @override
@@ -38,8 +36,6 @@ class _SelectMenuItemsPageState extends State<SelectMenuItemsPage> {
   CollectionReference get categoriesCollection => FirebaseFirestore.instance
       .collection('branches')
       .doc(widget.branchId)
-      .collection('halls')
-      .doc(widget.hallName)
       .collection('menus')
       .doc(widget.menu.name)
       .collection('categories');
@@ -47,8 +43,6 @@ class _SelectMenuItemsPageState extends State<SelectMenuItemsPage> {
   CollectionReference get itemsCollection => FirebaseFirestore.instance
       .collection('branches')
       .doc(widget.branchId)
-      .collection('halls')
-      .doc(widget.hallName)
       .collection('menus')
       .doc(widget.menu.name)
       .collection('items');

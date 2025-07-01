@@ -151,6 +151,7 @@ class _CreateUserFormState extends State<CreateUserForm> {
     'queueReportsEnabled': false,
     'adminDisplayEnabled': false,
     'banquetSetupEnabled': false,
+    'chefDisplayEnabled': false, // NEW: Chef Display permission
     'userManagementEnabled': false,
     'menuManagementEnabled': false,
     'branchManagementEnabled': false,
@@ -186,6 +187,7 @@ class _CreateUserFormState extends State<CreateUserForm> {
       queueReportsEnabled: _roles['queueReportsEnabled']!,
       adminDisplayEnabled: _roles['adminDisplayEnabled']!,
       banquetSetupEnabled: _roles['banquetSetupEnabled']!,
+      chefDisplayEnabled: _roles['chefDisplayEnabled']!,
       userManagementEnabled: _roles['userManagementEnabled']!,
       menuManagementEnabled: _roles['menuManagementEnabled']!,
       branchManagementEnabled: _roles['branchManagementEnabled']!,
@@ -252,7 +254,8 @@ class _CreateUserFormState extends State<CreateUserForm> {
         'keys': [
           'banquetBookingEnabled',
           'banquetReportsEnabled',
-          'banquetSetupEnabled'
+          'banquetSetupEnabled',
+          'chefDisplayEnabled',
         ],
       },
       {
@@ -394,6 +397,7 @@ class _EditUserScreenState extends State<EditUserScreen> {
       'queueReportsEnabled': widget.user.queueReportsEnabled,
       'adminDisplayEnabled': widget.user.adminDisplayEnabled,
       'banquetSetupEnabled': widget.user.banquetSetupEnabled,
+      'chefDisplayEnabled': widget.user.chefDisplayEnabled,
       'userManagementEnabled': widget.user.userManagementEnabled,
       'menuManagementEnabled': widget.user.menuManagementEnabled,
       'branchManagementEnabled': widget.user.branchManagementEnabled,
@@ -421,6 +425,7 @@ class _EditUserScreenState extends State<EditUserScreen> {
       queueReportsEnabled: _roles['queueReportsEnabled']!,
       adminDisplayEnabled: _roles['adminDisplayEnabled']!,
       banquetSetupEnabled: _roles['banquetSetupEnabled']!,
+      chefDisplayEnabled: _roles['chefDisplayEnabled']!,
       userManagementEnabled: _roles['userManagementEnabled']!,
       menuManagementEnabled: _roles['menuManagementEnabled']!,
       branchManagementEnabled: _roles['branchManagementEnabled']!,
@@ -520,7 +525,8 @@ class _EditUserScreenState extends State<EditUserScreen> {
         'keys': [
           'banquetBookingEnabled',
           'banquetReportsEnabled',
-          'banquetSetupEnabled'
+          'banquetSetupEnabled',
+          'chefDisplayEnabled',
         ],
       },
       {

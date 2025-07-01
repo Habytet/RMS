@@ -24,6 +24,7 @@ import 'screens/customer_screen.dart';
 import 'screens/banquet/banquet_calendar_screen.dart';
 import 'screens/banquet/hall_slot_management_screen.dart';
 import 'screens/banquet/banquet_bookings_report_screen.dart';
+import 'screens/banquet/chef_display_screen.dart';
 import 'screens/banquet/edit_booking_page.dart';
 import 'screens/banquet/select_menu_items_page.dart';
 import 'screens/branch_manager/branch_manager_tasks_screen.dart';
@@ -33,11 +34,13 @@ import 'screens/manager_admin/create_new_task_screen.dart';
 import 'screens/manager_admin/staff_assigned_task_detail_screen.dart';
 import 'screens/manager_admin/staff_inprogress_task_detail_screen.dart';
 import 'screens/manager_admin/staff_completed_task_detail_screen.dart';
+import 'screens/notification_screen/notification_screen.dart';
 
 // --- MODELS (No changes here) ---
 import 'models/task.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -67,6 +70,7 @@ Future<void> main() async {
             branchId: userProvider.currentBranchId,
           ),
         ),
+        BlocProvider(create: (_) => NotificationBloc()),
       ],
       child: const MyApp(),
     ),
@@ -96,9 +100,12 @@ class MyApp extends StatelessWidget {
         '/banquet': (_) => const BanquetCalendarScreen(),
         '/banquet/setup': (_) => HallSlotManagementScreen(),
         '/banquet/bookings': (_) => BanquetBookingsReportScreen(),
+        '/banquet/chef_display': (_) => ChefDisplayScreen(),
         '/tasks/branch_manager': (_) => const BranchManagerTasksScreen(),
         '/tasks/manager_admin/staff_tasks': (_) => const StaffTasksScreen(),
         '/tasks/manager_admin/create_task': (_) => const CreateNewTaskScreen(),
+        '/notifications': (_) =>
+            NotificationScreen(bloc: BlocProvider.of<NotificationBloc>(_)),
       },
       onGenerateRoute: (settings) {
         switch (settings.name) {
@@ -118,7 +125,6 @@ class MyApp extends StatelessWidget {
                 menu: args['menu'],
                 initialSelections: args['initialSelections'],
                 branchId: args['branchId'],
-                hallName: args['hallName'],
               ),
             );
           case '/tasks/branch_manager/detail':

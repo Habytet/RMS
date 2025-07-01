@@ -32,17 +32,26 @@ class _BookingFormDialogState extends State<BookingFormDialog> {
     final phone = _phoneController.text.trim();
     final pax = int.tryParse(_paxController.text.trim()) ?? 0;
     final amount = double.tryParse(_amountController.text.trim()) ?? 0;
-    final totalAmount = double.tryParse(_totalAmountController.text.trim()) ?? 0;
+    final totalAmount =
+        double.tryParse(_totalAmountController.text.trim()) ?? 0;
     final remaining = totalAmount - amount;
     final menu = _menuController.text.trim();
     final comments = _commentsController.text.trim();
 
-    if (name.isEmpty || phone.isEmpty || menu.isEmpty || pax == 0 || totalAmount == 0) return;
+    if (name.isEmpty ||
+        phone.isEmpty ||
+        menu.isEmpty ||
+        pax == 0 ||
+        totalAmount == 0) return;
 
     final booking = BanquetBooking(
       date: widget.date,
-      hallName: widget.hallName,
-      slotLabel: widget.slotLabel,
+      hallSlots: [
+        {
+          'hallName': widget.hallName,
+          'slotLabel': widget.slotLabel,
+        }
+      ],
       customerName: name,
       phone: phone,
       pax: pax,
@@ -69,20 +78,42 @@ class _BookingFormDialogState extends State<BookingFormDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('Date: ${widget.date.toLocal().toString().split(' ')[0]}'),
-            TextField(controller: _nameController, decoration: InputDecoration(labelText: 'Customer Name')),
-            TextField(controller: _phoneController, decoration: InputDecoration(labelText: 'Phone')),
-            TextField(controller: _paxController, decoration: InputDecoration(labelText: 'PAX'), keyboardType: TextInputType.number),
-            TextField(controller: _totalAmountController, decoration: InputDecoration(labelText: 'Total Amount'), keyboardType: TextInputType.number),
-            TextField(controller: _amountController, decoration: InputDecoration(labelText: 'Amount Received (Advance)'), keyboardType: TextInputType.number),
-            TextField(controller: _menuController, decoration: InputDecoration(labelText: 'Menu')),
-            TextField(controller: _commentsController, decoration: InputDecoration(labelText: 'Comments')),
+            TextField(
+                controller: _nameController,
+                decoration: InputDecoration(labelText: 'Customer Name')),
+            TextField(
+                controller: _phoneController,
+                decoration: InputDecoration(labelText: 'Phone')),
+            TextField(
+                controller: _paxController,
+                decoration: InputDecoration(labelText: 'PAX'),
+                keyboardType: TextInputType.number),
+            TextField(
+                controller: _totalAmountController,
+                decoration: InputDecoration(labelText: 'Total Amount'),
+                keyboardType: TextInputType.number),
+            TextField(
+                controller: _amountController,
+                decoration:
+                    InputDecoration(labelText: 'Amount Received (Advance)'),
+                keyboardType: TextInputType.number),
+            TextField(
+                controller: _menuController,
+                decoration: InputDecoration(labelText: 'Menu')),
+            TextField(
+                controller: _commentsController,
+                decoration: InputDecoration(labelText: 'Comments')),
           ],
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
-        OutlinedButton(onPressed: () => _submit(isDraft: true), child: Text('Save Draft')),
-        ElevatedButton(onPressed: () => _submit(isDraft: false), child: Text('Confirm Booking')),
+        TextButton(
+            onPressed: () => Navigator.pop(context), child: Text('Cancel')),
+        OutlinedButton(
+            onPressed: () => _submit(isDraft: true), child: Text('Save Draft')),
+        ElevatedButton(
+            onPressed: () => _submit(isDraft: false),
+            child: Text('Confirm Booking')),
       ],
     );
   }
