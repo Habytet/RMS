@@ -181,13 +181,33 @@ class _PodiumOperatorScreenState extends State<PodiumOperatorScreen>
     }
 
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Podium Operator'),
+        title: const Text(
+          'Podium Operator',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 20,
+          ),
+        ),
+        backgroundColor: Colors.red.shade400,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
         bottom: TabBar(
           controller: _tabController,
+          indicatorColor: Colors.white,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
           tabs: const [
-            Tab(text: 'Register'),
-            Tab(text: 'Call Customers'),
+            Tab(
+              icon: Icon(Icons.person_add),
+              text: 'Register',
+            ),
+            Tab(
+              icon: Icon(Icons.phone),
+              text: 'Call Customers',
+            ),
           ],
         ),
       ),
@@ -195,179 +215,794 @@ class _PodiumOperatorScreenState extends State<PodiumOperatorScreen>
         controller: _tabController,
         children: [
           // Register Tab
-          Padding(
+          SingleChildScrollView(
             padding: const EdgeInsets.all(16),
-            child: ListView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Branch Selection for Corporate Users
                 if (isCorporate)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12.0),
-                    child: DropdownButtonFormField<String>(
-                      value: _selectedBranchId,
-                      decoration: const InputDecoration(
-                        labelText: 'Register to Branch',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: [
-                        const DropdownMenuItem(
-                            value: 'all',
-                            child: Text('All Branches (Disabled)')),
-                        ...allBranches
-                            .where((branch) => branch.id != 'all')
-                            .map((branch) => DropdownMenuItem(
-                                  value: branch.id,
-                                  child: Text(branch.name),
-                                )),
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 20),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
                       ],
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedBranchId = value;
-                        });
-                      },
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.business,
+                                color: Colors.red.shade400, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Branch Selection',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: DropdownButtonFormField<String>(
+                            value: _selectedBranchId,
+                            decoration: InputDecoration(
+                              hintText: 'Select branch to register',
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                              suffixIcon: Icon(Icons.keyboard_arrow_down,
+                                  color: Colors.grey.shade400),
+                            ),
+                            items: [
+                              const DropdownMenuItem(
+                                  value: 'all',
+                                  child: Text('All Branches (Disabled)')),
+                              ...allBranches
+                                  .where((branch) => branch.id != 'all')
+                                  .map((branch) => DropdownMenuItem(
+                                        value: branch.id,
+                                        child: Text(branch.name),
+                                      )),
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedBranchId = value;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                Text('Next Token: ${tokenProvider.nextToken}',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                TextField(
-                    controller: _nameController,
-                    decoration:
-                        const InputDecoration(labelText: 'Customer Name')),
-                TextField(
-                    controller: _phoneController,
-                    decoration: const InputDecoration(labelText: 'Phone'),
-                    keyboardType: TextInputType.number),
-                TextField(
-                    controller: _paxController,
-                    decoration:
-                        const InputDecoration(labelText: 'No. of Adults'),
-                    keyboardType: TextInputType.number),
-                TextField(
-                    controller: _childrenController,
-                    decoration:
-                        const InputDecoration(labelText: 'No. of Children'),
-                    keyboardType: TextInputType.number),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => _registerCustomer(isAdmin: isAdmin),
-                  child: const Text('Register Customer'),
+
+                // Next Token Display
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.confirmation_number,
+                              color: Colors.blue.shade600,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Next Token',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey.shade600,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${tokenProvider.nextToken}',
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey.shade800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Registration Form
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.person_add,
+                              color: Colors.red.shade400, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Customer Registration',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Customer Name Field
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: TextField(
+                          controller: _nameController,
+                          decoration: InputDecoration(
+                            labelText: 'Customer Name',
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            prefixIcon:
+                                Icon(Icons.person, color: Colors.grey.shade400),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Phone Field
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: TextField(
+                          controller: _phoneController,
+                          decoration: InputDecoration(
+                            labelText: 'Phone Number',
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            prefixIcon:
+                                Icon(Icons.phone, color: Colors.grey.shade400),
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Adults and Children Row
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: TextField(
+                                controller: _paxController,
+                                decoration: InputDecoration(
+                                  labelText: 'Number of Adults',
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
+                                  prefixIcon: Icon(Icons.person,
+                                      color: Colors.grey.shade400),
+                                ),
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: TextField(
+                                controller: _childrenController,
+                                decoration: InputDecoration(
+                                  labelText: 'Number of Children',
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
+                                  prefixIcon: Icon(Icons.child_care,
+                                      color: Colors.grey.shade400),
+                                ),
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Register Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () => _registerCustomer(isAdmin: isAdmin),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade400,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Register Customer',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
 
           // Call Customers Tab
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Available Tables:',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                tables.isEmpty
-                    ? const Text('No tables available',
-                        style: TextStyle(color: Colors.grey))
-                    : Wrap(
-                        spacing: 8,
-                        children: tables
-                            .map((t) => Chip(
-                                  label: Text('Table $t'),
-                                  onDeleted: () => tokenProvider.removeTable(t),
-                                ))
-                            .toList(),
-                      ),
-                const SizedBox(height: 16),
-                const Divider(),
-                const Text('Customers Waiting:',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: queue.isEmpty
-                      ? const Center(child: Text('No customers in queue'))
-                      : ListView.builder(
-                          itemCount: queue.length,
-                          itemBuilder: (context, index) {
-                            final c = queue[index];
-                            final duration =
-                                DateTime.now().difference(c.registeredAt);
-                            final isLate = duration.inMinutes >= 15;
-
-                            return Dismissible(
-                              key: ValueKey(c.token),
-                              direction: DismissDirection.startToEnd,
-                              onDismissed: (_) {
-                                final waiterName = context
-                                        .read<UserProvider>()
-                                        .currentUser
-                                        ?.username ??
-                                    'Unknown';
-                                context
-                                    .read<TokenProvider>()
-                                    .seatCustomer(c, waiterName);
-                              },
-                              background: Container(
-                                color: Colors.blue,
-                                alignment: Alignment.centerLeft,
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                child: const Icon(Icons.login,
-                                    color: Colors.white),
-                              ),
-                              child: Card(
-                                shape: RoundedRectangleBorder(
-                                  side: BorderSide(
-                                    color: c.isCalled
-                                        ? Colors.green
-                                        : Colors.transparent,
-                                    width: 2,
+          Column(
+            children: [
+              // Available Tables Section
+              Container(
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.table_restaurant,
+                            color: Colors.red.shade400, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Available Tables',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    tables.isEmpty
+                        ? Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.info_outline,
+                                    color: Colors.grey.shade400),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'No tables available',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 14,
                                   ),
-                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                color: isLate ? Colors.red.shade400 : null,
-                                child: ListTile(
-                                  title: Text(
-                                    '${c.name} (${c.pax} adults, ${c.children} kids)',
-                                    style: TextStyle(
-                                        color: isLate ? Colors.white : null,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                  subtitle: Text(
-                                    'Token: ${c.token} | Waiting: ${duration.inMinutes} mins',
-                                    style: TextStyle(
-                                        color: isLate ? Colors.white70 : null),
-                                  ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.message,
-                                            color: Colors.green),
-                                        onPressed: c.isCalled
-                                            ? null
-                                            : () => _sendWhatsAppMessage(
-                                                c.token, c.phone, c.name),
+                              ],
+                            ),
+                          )
+                        : Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: tables
+                                .map((t) => Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.shade100,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                            color: Colors.green.shade200),
                                       ),
-                                      ElevatedButton(
-                                        onPressed: c.isCalled
-                                            ? null
-                                            : () => _callCustomer(c.token),
-                                        style: c.isCalled
-                                            ? ElevatedButton.styleFrom(
-                                                backgroundColor: Colors.grey)
-                                            : null,
-                                        child: Text(
-                                            c.isCalled ? 'Called' : 'Call'),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 6),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.table_restaurant,
+                                                color: Colors.green.shade600,
+                                                size: 16),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              'Table $t',
+                                              style: TextStyle(
+                                                color: Colors.green.shade700,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            GestureDetector(
+                                              onTap: () =>
+                                                  tokenProvider.removeTable(t),
+                                              child: Icon(Icons.close,
+                                                  color: Colors.green.shade600,
+                                                  size: 16),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ))
+                                .toList(),
+                          ),
+                  ],
+                ),
+              ),
+
+              // Customers Waiting Section
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.people,
+                              color: Colors.red.shade400, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Customers Waiting',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade100,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              '${queue.length} customers',
+                              style: TextStyle(
+                                color: Colors.red.shade700,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: queue.isEmpty
+                            ? Center(
+                                child: Container(
+                                  padding: const EdgeInsets.all(32),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.queue_music,
+                                        size: 64,
+                                        color: Colors.grey.shade400,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'No customers waiting',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'The queue is currently empty',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey.shade500,
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
+                              )
+                            : ListView.builder(
+                                itemCount: queue.length,
+                                itemBuilder: (context, index) {
+                                  final c = queue[index];
+                                  final duration =
+                                      DateTime.now().difference(c.registeredAt);
+                                  final isLate = duration.inMinutes >= 15;
+
+                                  return Dismissible(
+                                    key: ValueKey(c.token),
+                                    direction: DismissDirection.startToEnd,
+                                    onDismissed: (_) {
+                                      final waiterName = context
+                                              .read<UserProvider>()
+                                              .currentUser
+                                              ?.username ??
+                                          'Unknown';
+                                      context
+                                          .read<TokenProvider>()
+                                          .seatCustomer(c, waiterName);
+                                    },
+                                    background: Container(
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.shade400,
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      alignment: Alignment.centerLeft,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 20),
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.login,
+                                              color: Colors.white),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Seat Customer',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    child: Container(
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      decoration: BoxDecoration(
+                                        color: isLate
+                                            ? Colors.red.shade400
+                                            : Colors.white,
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color: c.isCalled
+                                              ? Colors.green
+                                              : Colors.transparent,
+                                          width: 2,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color:
+                                                Colors.black.withOpacity(0.05),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(20),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.all(8),
+                                                  decoration: BoxDecoration(
+                                                    color: isLate
+                                                        ? Colors.white
+                                                            .withOpacity(0.2)
+                                                        : Colors.blue.shade100,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.person,
+                                                    color: isLate
+                                                        ? Colors.white
+                                                        : Colors.blue.shade600,
+                                                    size: 20,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        c.name,
+                                                        style: TextStyle(
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: isLate
+                                                              ? Colors.white
+                                                              : Colors.grey
+                                                                  .shade800,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 4),
+                                                      Text(
+                                                        'Token: ${c.token} | Waiting: ${duration.inMinutes} mins',
+                                                        style: TextStyle(
+                                                          fontSize: 14,
+                                                          color: isLate
+                                                              ? Colors.white70
+                                                              : Colors.grey
+                                                                  .shade600,
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                if (isLate)
+                                                  Container(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 4),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.white
+                                                          .withOpacity(0.2),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              12),
+                                                    ),
+                                                    child: Text(
+                                                      'LATE',
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 10,
+                                                      ),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Row(
+                                              children: [
+                                                _buildInfoChip(
+                                                  '${c.pax} Adults',
+                                                  Icons.person,
+                                                  isLate
+                                                      ? Colors.white
+                                                          .withOpacity(0.2)
+                                                      : Colors.blue.shade100,
+                                                  isLate
+                                                      ? Colors.white
+                                                      : Colors.blue.shade600,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                _buildInfoChip(
+                                                  '${c.children} Kids',
+                                                  Icons.child_care,
+                                                  isLate
+                                                      ? Colors.white
+                                                          .withOpacity(0.2)
+                                                      : Colors.orange.shade100,
+                                                  isLate
+                                                      ? Colors.white
+                                                      : Colors.orange.shade600,
+                                                ),
+                                                const Spacer(),
+                                                Row(
+                                                  children: [
+                                                    Container(
+                                                      decoration: BoxDecoration(
+                                                        color: c.isCalled
+                                                            ? Colors
+                                                                .grey.shade300
+                                                            : Colors
+                                                                .green.shade100,
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(8),
+                                                      ),
+                                                      child: IconButton(
+                                                        icon: Icon(
+                                                          Icons.message,
+                                                          color: c.isCalled
+                                                              ? Colors
+                                                                  .grey.shade500
+                                                              : Colors.green
+                                                                  .shade600,
+                                                        ),
+                                                        onPressed: c.isCalled
+                                                            ? null
+                                                            : () =>
+                                                                _sendWhatsAppMessage(
+                                                                    c.token,
+                                                                    c.phone,
+                                                                    c.name),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    SizedBox(
+                                                      height: 40,
+                                                      child: ElevatedButton(
+                                                        onPressed: c.isCalled
+                                                            ? null
+                                                            : () =>
+                                                                _callCustomer(
+                                                                    c.token),
+                                                        style: ElevatedButton
+                                                            .styleFrom(
+                                                          backgroundColor:
+                                                              c.isCalled
+                                                                  ? Colors.grey
+                                                                      .shade300
+                                                                  : Colors.red
+                                                                      .shade400,
+                                                          foregroundColor: c
+                                                                  .isCalled
+                                                              ? Colors
+                                                                  .grey.shade500
+                                                              : Colors.white,
+                                                          shape:
+                                                              RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        8),
+                                                          ),
+                                                          elevation: 0,
+                                                        ),
+                                                        child: Text(
+                                                          c.isCalled
+                                                              ? 'Called'
+                                                              : 'Call',
+                                                          style: TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            fontSize: 12,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
-                            );
-                          },
-                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoChip(
+      String label, IconData icon, Color bgColor, Color iconColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: iconColor,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: iconColor,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],

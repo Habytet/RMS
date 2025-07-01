@@ -19,8 +19,7 @@ class BanquetBookingsReportScreen extends StatefulWidget {
 class _BanquetBookingsReportScreenState
     extends State<BanquetBookingsReportScreen> {
   String? _selectedBranchId;
-  DateTime? _fromDate;
-  DateTime? _toDate;
+  DateTimeRange? _dateRange;
 
   @override
   void initState() {
@@ -37,13 +36,13 @@ class _BanquetBookingsReportScreenState
     }
   }
 
-  Future<void> _pickDate(bool isFrom) async {
+  Future<void> _pickDateRange() async {
     final now = DateTime.now();
-    final picked = await showDatePicker(
+    final picked = await showDateRangePicker(
       context: context,
-      initialDate: isFrom ? (_fromDate ?? now) : (_toDate ?? now),
       firstDate: DateTime(now.year - 2),
       lastDate: DateTime(now.year + 2),
+      initialDateRange: _dateRange,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -51,18 +50,20 @@ class _BanquetBookingsReportScreenState
               primary: Colors.red.shade400,
               onPrimary: Colors.white,
               surface: Colors.white,
-              onSurface: Colors.grey.shade800,
+              onSurface: Colors.red.shade700,
+              secondary: Colors.red.shade300,
+              onSecondary: Colors.white,
             ),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
-                foregroundColor: Colors.red.shade400,
+                foregroundColor: Colors.red.shade600,
               ),
             ),
             dialogTheme: DialogTheme(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
-              elevation: 8,
+              backgroundColor: Colors.white,
             ),
           ),
           child: child!,
@@ -71,10 +72,7 @@ class _BanquetBookingsReportScreenState
     );
     if (picked != null) {
       setState(() {
-        if (isFrom)
-          _fromDate = picked;
-        else
-          _toDate = picked;
+        _dateRange = picked;
       });
     }
   }
@@ -211,8 +209,7 @@ class _BanquetBookingsReportScreenState
                     ),
                   ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
                     Text(
                       'Date Range',
@@ -222,27 +219,33 @@ class _BanquetBookingsReportScreenState
                         color: Colors.red.shade600,
                       ),
                     ),
-                    SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildDateButton(
-                            label: 'From Date',
-                            date: _fromDate,
-                            onTap: () => _pickDate(true),
-                            icon: Icons.calendar_today,
+                    Spacer(),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        onPressed: _pickDateRange,
+                        icon: Icon(Icons.calendar_today,
+                            size: 18, color: Colors.red.shade600),
+                        label: Text(
+                          _dateRange == null
+                              ? 'Pick Date Range'
+                              : '${DateFormat('MMM dd').format(_dateRange!.start)} - ${DateFormat('MMM dd').format(_dateRange!.end)}',
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w500),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade100,
+                          foregroundColor: Colors.red.shade700,
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: _buildDateButton(
-                            label: 'To Date',
-                            date: _toDate,
-                            onTap: () => _pickDate(false),
-                            icon: Icons.calendar_today,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
@@ -281,12 +284,12 @@ class _BanquetBookingsReportScreenState
                             );
                           }
 
-                          if (_fromDate == null || _toDate == null) {
+                          if (_dateRange == null) {
                             return _buildEmptyState(
                               icon: Icons.date_range,
                               title: 'Select Date Range',
                               subtitle:
-                                  'Please select both from and to dates to view bookings',
+                                  'Please select a date range to view bookings',
                             );
                           }
 
@@ -296,10 +299,15 @@ class _BanquetBookingsReportScreenState
                                   doc.id, BanquetBooking.fromMap(doc.data())))
                               .where((entry) {
                             final d = entry.value.date;
-                            final from = DateTime(_fromDate!.year,
-                                _fromDate!.month, _fromDate!.day);
-                            final to = DateTime(_toDate!.year, _toDate!.month,
-                                _toDate!.day, 23, 59, 59);
+                            final from = DateTime(_dateRange!.start.year,
+                                _dateRange!.start.month, _dateRange!.start.day);
+                            final to = DateTime(
+                                _dateRange!.end.year,
+                                _dateRange!.end.month,
+                                _dateRange!.end.day,
+                                23,
+                                59,
+                                59);
                             return !d.isBefore(from) && !d.isAfter(to);
                           }).toList();
 
@@ -319,66 +327,6 @@ class _BanquetBookingsReportScreenState
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDateButton({
-    required String label,
-    required DateTime? date,
-    required VoidCallback onTap,
-    required IconData icon,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: date != null ? Colors.red.shade50 : Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: date != null ? Colors.red.shade200 : Colors.grey.shade300,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 20,
-              color: date != null ? Colors.red.shade400 : Colors.grey.shade600,
-            ),
-            SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    date == null
-                        ? 'Select Date'
-                        : DateFormat('MMM dd, yyyy').format(date),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: date != null
-                          ? Colors.red.shade600
-                          : Colors.grey.shade700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );

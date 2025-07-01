@@ -157,6 +157,32 @@ class _QueueReportsScreenState extends State<QueueReportsScreen> {
       firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 1)),
       initialDateRange: _range,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Colors.red.shade400,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.red.shade700,
+              secondary: Colors.red.shade300,
+              onSecondary: Colors.white,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red.shade600,
+              ),
+            ),
+            dialogTheme: DialogTheme(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              backgroundColor: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       setState(() {
@@ -180,7 +206,17 @@ class _QueueReportsScreenState extends State<QueueReportsScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+      builder: (context) => AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.red.shade400),
+            ),
+            SizedBox(width: 16),
+            Text('Generating Excel report...'),
+          ],
+        ),
+      ),
     );
 
     try {
@@ -341,116 +377,478 @@ class _QueueReportsScreenState extends State<QueueReportsScreen> {
     }
   }
 
+  // Calculate statistics
+  Map<String, dynamic> _calculateStats() {
+    if (_customers.isEmpty) {
+      return {
+        'totalCustomers': 0,
+        'avgWaitTime': 0,
+        'totalPAX': 0,
+        'avgPAX': 0,
+      };
+    }
+
+    int totalWaitTime = 0;
+    int customersWithWaitTime = 0;
+    int totalPAX = 0;
+
+    for (var customer in _customers) {
+      if (customer.calledAt != null) {
+        final waitTime =
+            customer.calledAt!.difference(customer.registeredAt).inMinutes;
+        totalWaitTime += waitTime;
+        customersWithWaitTime++;
+      }
+      totalPAX += customer.pax;
+    }
+
+    return {
+      'totalCustomers': _customers.length,
+      'avgWaitTime': customersWithWaitTime > 0
+          ? (totalWaitTime / customersWithWaitTime).round()
+          : 0,
+      'totalPAX': totalPAX,
+      'avgPAX':
+          (_customers.length > 0) ? (totalPAX / _customers.length).round() : 0,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     // Get the branches list from the provider, just like your working AdminDisplayScreen
     final userProvider = context.watch<UserProvider>();
     final branches = userProvider.branches;
     final isAdmin = userProvider.currentUser?.isAdmin ?? false;
+    final stats = _calculateStats();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Queue Reports')),
-      body: Column(
-        children: [
-          // This is the dropdown logic from your working screen
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: DropdownButtonFormField<String>(
-              value: _selectedBranchId,
-              hint: const Text('Select a Branch to View Report'),
-              isExpanded: true,
-              decoration: const InputDecoration(border: OutlineInputBorder()),
-              items: [
-                const DropdownMenuItem(
-                    value: 'all', child: Text('All Branches')),
-                ...branches.map((branch) {
-                  return DropdownMenuItem(
-                      value: branch.id, child: Text(branch.name));
-                }).toList(),
-              ],
-              onChanged: isAdmin
-                  ? (value) {
-                      if (value != null) {
-                        setState(() => _selectedBranchId = value);
-                        _fetchReportData(); // Fetch data when a branch is selected
-                      }
-                    }
-                  : null, // Dropdown is disabled for non-admins
-            ),
+      appBar: AppBar(
+        title: Text('Queue Reports'),
+        backgroundColor: Colors.red.shade300,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.red.shade50,
+              Colors.white,
+            ],
           ),
-          // Date picker and download buttons row
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _selectedBranchId != null ? _pickRange : null,
-                    icon: const Icon(Icons.calendar_today),
-                    label: Text(_range == null
-                        ? 'Pick Date Range'
-                        : '${_fmt.format(_range!.start)} → ${_fmt.format(_range!.end)}'),
+        ),
+        child: Column(
+          children: [
+            // Branch Selection
+            Container(
+              margin: EdgeInsets.all(16),
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
                   ),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: _customers.isNotEmpty ? _downloadExcel : null,
-                  icon: const Icon(Icons.download),
-                  label: const Text('Download Excel'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          // UI to show loading indicator or the data table
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _customers.isEmpty
-                    ? Center(
-                        child: Text(_selectedBranchId == null
-                            ? 'Please select a branch.'
-                            : 'No data for selected range.'))
-                    : SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: DataTable(
-                          columns: [
-                            const DataColumn(label: Text('Token')),
-                            const DataColumn(label: Text('Customer Name')),
-                            if (_selectedBranchId == 'all')
-                              const DataColumn(label: Text('Branch')),
-                            const DataColumn(label: Text('PAX')),
-                            const DataColumn(label: Text('Seated At')),
-                            const DataColumn(label: Text('Wait Time')),
-                            const DataColumn(label: Text('Operator')),
-                          ],
-                          rows: _customers.map((customer) {
-                            final waitTime = customer.calledAt != null
-                                ? customer.calledAt!
-                                    .difference(customer.registeredAt)
-                                    .inMinutes
-                                    .toString()
-                                : '-';
-                            return DataRow(cells: [
-                              DataCell(Text('${customer.token}')),
-                              DataCell(Text(customer.name)),
-                              if (_selectedBranchId == 'all')
-                                DataCell(Text(customer.branchName ?? 'N/A')),
-                              DataCell(Text('${customer.pax}')),
-                              DataCell(Text(customer.registeredAt != null
-                                  ? DateFormat('dd MMM, HH:mm')
-                                      .format(customer.registeredAt)
-                                  : '-')),
-                              DataCell(Text('$waitTime mins')),
-                              DataCell(Text(customer.operator ?? 'N/A')),
-                            ]);
-                          }).toList(),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.business, color: Colors.red.shade600),
+                      SizedBox(width: 8),
+                      Text(
+                        'Select Branch',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red.shade700,
                         ),
                       ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: _selectedBranchId,
+                    hint: Text('Select a Branch to View Report'),
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            BorderSide(color: Colors.red.shade400, width: 2),
+                      ),
+                      prefixIcon:
+                          Icon(Icons.location_on, color: Colors.red.shade400),
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: 'all',
+                        child: Text('All Branches'),
+                      ),
+                      ...branches.map((branch) {
+                        return DropdownMenuItem(
+                          value: branch.id,
+                          child: Text(branch.name),
+                        );
+                      }).toList(),
+                    ],
+                    onChanged: isAdmin
+                        ? (value) {
+                            if (value != null) {
+                              setState(() => _selectedBranchId = value);
+                              _fetchReportData(); // Fetch data when a branch is selected
+                            }
+                          }
+                        : null, // Dropdown is disabled for non-admins
+                  ),
+                ],
+              ),
+            ),
+
+            // Statistics Overview
+            if (_selectedBranchId != null)
+              Container(
+                margin: EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            'Total Customers',
+                            stats['totalCustomers'].toString(),
+                            Icons.people,
+                            Colors.blue.shade100,
+                            Colors.blue.shade600,
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: _buildStatCard(
+                            'Avg Wait Time',
+                            '${stats['avgWaitTime']} mins',
+                            Icons.timer,
+                            Colors.orange.shade100,
+                            Colors.orange.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            'Total PAX',
+                            stats['totalPAX'].toString(),
+                            Icons.person_add,
+                            Colors.green.shade100,
+                            Colors.green.shade600,
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: _buildStatCard(
+                            'Avg PAX',
+                            stats['avgPAX'].toString(),
+                            Icons.analytics,
+                            Colors.purple.shade100,
+                            Colors.purple.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+            SizedBox(height: 16),
+
+            // Date Range and Export Controls
+            Container(
+              margin: EdgeInsets.symmetric(horizontal: 16),
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.date_range, color: Colors.red.shade600),
+                      SizedBox(width: 8),
+                      Text(
+                        'Report Controls',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed:
+                              _selectedBranchId != null ? _pickRange : null,
+                          icon: Icon(Icons.calendar_today,
+                              size: 20, color: Colors.red.shade600),
+                          label: Text(
+                            _range == null
+                                ? 'Pick Date Range'
+                                : '${_fmt.format(_range!.start)}\n${_fmt.format(_range!.end)}',
+                            style: TextStyle(fontSize: 12),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade100,
+                            foregroundColor: Colors.red.shade700,
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        onPressed:
+                            _customers.isNotEmpty ? _downloadExcel : null,
+                        icon: Icon(Icons.download,
+                            size: 20, color: Colors.green.shade600),
+                        label: Text('Export Excel',
+                            style: TextStyle(fontSize: 12)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green.shade100,
+                          foregroundColor: Colors.green.shade700,
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            SizedBox(height: 16),
+
+            // Data Table
+            Expanded(
+              child: _isLoading
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.red.shade400),
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'Loading report data...',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : _customers.isEmpty
+                      ? Container(
+                          margin: EdgeInsets.all(16),
+                          padding: EdgeInsets.all(40),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                _selectedBranchId == null
+                                    ? Icons.business
+                                    : Icons.analytics_outlined,
+                                size: 64,
+                                color: Colors.grey.shade400,
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                _selectedBranchId == null
+                                    ? 'Please select a branch'
+                                    : 'No data for selected range',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                _selectedBranchId == null
+                                    ? 'Choose a branch to view queue reports'
+                                    : 'Try adjusting your date range',
+                                style: TextStyle(
+                                  color: Colors.grey.shade500,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        )
+                      : Container(
+                          margin: EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.vertical,
+                              child: DataTable(
+                                headingTextStyle: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.red.shade700,
+                                ),
+                                dataTextStyle: TextStyle(
+                                  color: Colors.grey.shade700,
+                                ),
+                                columns: [
+                                  DataColumn(label: Text('Token')),
+                                  DataColumn(label: Text('Customer Name')),
+                                  if (_selectedBranchId == 'all')
+                                    DataColumn(label: Text('Branch')),
+                                  DataColumn(label: Text('PAX')),
+                                  DataColumn(label: Text('Seated At')),
+                                  DataColumn(label: Text('Wait Time')),
+                                  DataColumn(label: Text('Operator')),
+                                ],
+                                rows: _customers.map((customer) {
+                                  final waitTime = customer.calledAt != null
+                                      ? customer.calledAt!
+                                          .difference(customer.registeredAt)
+                                          .inMinutes
+                                          .toString()
+                                      : '-';
+                                  return DataRow(cells: [
+                                    DataCell(Text('${customer.token}')),
+                                    DataCell(Text(customer.name)),
+                                    if (_selectedBranchId == 'all')
+                                      DataCell(
+                                          Text(customer.branchName ?? 'N/A')),
+                                    DataCell(Text('${customer.pax}')),
+                                    DataCell(Text(customer.registeredAt != null
+                                        ? DateFormat('dd MMM, HH:mm')
+                                            .format(customer.registeredAt)
+                                        : '-')),
+                                    DataCell(Text('$waitTime mins')),
+                                    DataCell(Text(customer.operator ?? 'N/A')),
+                                  ]);
+                                }).toList(),
+                              ),
+                            ),
+                          ),
+                        ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon,
+      Color bgColor, Color iconColor) {
+    return Container(
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: iconColor, size: 28),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: iconColor,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ],
       ),
