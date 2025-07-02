@@ -812,6 +812,19 @@ class _WaiterTableScreenState extends State<WaiterTableScreen> {
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
+                                        if (c.assignedTableNumber != null) ...[
+                                          SizedBox(height: 2),
+                                          Text(
+                                            'Customer seated in - Table ${c.assignedTableNumber}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: isLate
+                                                  ? Colors.white70
+                                                  : Colors.green.shade600,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
                                       ],
                                     ),
                                   ),

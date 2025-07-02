@@ -354,4 +354,54 @@ class TokenProvider extends ChangeNotifier {
       tx.update(branchDoc, {'availableTables': tablesForStorage});
     });
   }
+
+  // Method to get all customers from today (both in queue and completed)
+  Future<List<Customer>> getTodaysCustomers(String? branchIdOverride) async {
+    final String effectiveBranchId =
+        branchIdOverride ?? _adminSelectedBranchId ?? branchId;
+    if (effectiveBranchId == 'all' || effectiveBranchId.isEmpty) {
+      throw Exception("Cannot get today's customers in 'All Branches' view.");
+    }
+
+    final today = DateTime.now();
+    final startOfDay = DateTime(today.year, today.month, today.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    final branchRef = _firestore.collection('branches').doc(effectiveBranchId);
+
+    // Get customers from queue collection
+    final queueQuery = branchRef
+        .collection('queue')
+        .where('registeredAt',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('registeredAt', isLessThan: Timestamp.fromDate(endOfDay));
+
+    // Get customers from completed collection
+    final completedQuery = branchRef
+        .collection('completed')
+        .where('registeredAt',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('registeredAt', isLessThan: Timestamp.fromDate(endOfDay));
+
+    final queueSnapshot = await queueQuery.get();
+    final completedSnapshot = await completedQuery.get();
+
+    final queueCustomers = queueSnapshot.docs.map((doc) {
+      final customer = Customer.fromMap(doc.data());
+      customer.branchName = effectiveBranchId;
+      return customer;
+    }).toList();
+
+    final completedCustomers = completedSnapshot.docs.map((doc) {
+      final customer = Customer.fromMap(doc.data());
+      customer.branchName = effectiveBranchId;
+      return customer;
+    }).toList();
+
+    // Combine and sort by registration time
+    final allCustomers = [...queueCustomers, ...completedCustomers];
+    allCustomers.sort((a, b) => a.registeredAt.compareTo(b.registeredAt));
+
+    return allCustomers;
+  }
 }

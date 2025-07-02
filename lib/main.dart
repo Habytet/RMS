@@ -36,6 +36,7 @@ import 'screens/manager_admin/staff_assigned_task_detail_screen.dart';
 import 'screens/manager_admin/staff_inprogress_task_detail_screen.dart';
 import 'screens/manager_admin/staff_completed_task_detail_screen.dart';
 import 'screens/notification_screen/notification_screen.dart';
+import 'screens/todays_view_screen.dart';
 
 // --- MODELS (No changes here) ---
 import 'models/task.dart';
@@ -108,6 +109,7 @@ class MyApp extends StatelessWidget {
         '/tasks/manager_admin/create_task': (_) => const CreateNewTaskScreen(),
         '/notifications': (_) =>
             NotificationScreen(bloc: BlocProvider.of<NotificationBloc>(_)),
+        '/todays_view': (_) => TodaysViewScreen(),
       },
       onGenerateRoute: (settings) {
         switch (settings.name) {

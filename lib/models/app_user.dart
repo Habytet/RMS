@@ -12,6 +12,8 @@ class AppUser {
   final bool queueReportsEnabled;
   // --- NEW: Permission for the corporate admin display screen ---
   final bool adminDisplayEnabled;
+  // --- NEW: Today's View Permission ---
+  final bool todaysViewEnabled;
   // --- NEW: Admin and Banquet Setup Permissions ---
   final bool banquetSetupEnabled;
   // --- NEW: Chef Display Permission ---
@@ -40,6 +42,8 @@ class AppUser {
       this.queueReportsEnabled = false,
       // --- NEW: Added to constructor with a default of false ---
       this.adminDisplayEnabled = false,
+      // --- NEW: Today's View Permission ---
+      this.todaysViewEnabled = false,
       // --- NEW: Add to constructor ---
       this.banquetSetupEnabled = false,
       // --- NEW: Chef Display Permission ---
@@ -85,6 +89,8 @@ class AppUser {
       'queueReportsEnabled': queueReportsEnabled,
       // --- NEW: Added to the map for saving to Firestore ---
       'adminDisplayEnabled': adminDisplayEnabled,
+      // --- NEW: Today's View Permission ---
+      'todaysViewEnabled': todaysViewEnabled,
       // --- NEW: Add to map ---
       'banquetSetupEnabled': banquetSetupEnabled,
       // --- NEW: Chef Display Permission ---
@@ -116,6 +122,8 @@ class AppUser {
       queueReportsEnabled: map['queueReportsEnabled'] ?? false,
       // --- NEW: Reads the new permission from Firestore ---
       adminDisplayEnabled: map['adminDisplayEnabled'] ?? false,
+      // --- NEW: Today's View Permission ---
+      todaysViewEnabled: map['todaysViewEnabled'] ?? false,
       // --- NEW: Read from map ---
       banquetSetupEnabled: map['banquetSetupEnabled'] ?? false,
       // --- NEW: Chef Display Permission ---

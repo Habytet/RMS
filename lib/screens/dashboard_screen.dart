@@ -699,6 +699,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (user.waiterEnabled) items.add({'title': 'Waiter', 'route': '/waiter'});
     if (user.customerEnabled)
       items.add({'title': 'Customer Display', 'route': '/customer'});
+    if (user.todaysViewEnabled || user.isAdmin)
+      items.add({'title': "Today's View", 'route': '/todays_view'});
     _openSubMenu(context, 'Queue Module', items);
   }
 

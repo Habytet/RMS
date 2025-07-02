@@ -150,6 +150,7 @@ class _CreateUserFormState extends State<CreateUserForm> {
     'banquetReportsEnabled': false,
     'queueReportsEnabled': false,
     'adminDisplayEnabled': false,
+    'todaysViewEnabled': false, // NEW: Today's View permission
     'banquetSetupEnabled': false,
     'chefDisplayEnabled': false, // NEW: Chef Display permission
     'userManagementEnabled': false,
@@ -186,6 +187,7 @@ class _CreateUserFormState extends State<CreateUserForm> {
       banquetReportsEnabled: _roles['banquetReportsEnabled']!,
       queueReportsEnabled: _roles['queueReportsEnabled']!,
       adminDisplayEnabled: _roles['adminDisplayEnabled']!,
+      todaysViewEnabled: _roles['todaysViewEnabled']!,
       banquetSetupEnabled: _roles['banquetSetupEnabled']!,
       chefDisplayEnabled: _roles['chefDisplayEnabled']!,
       userManagementEnabled: _roles['userManagementEnabled']!,
@@ -246,7 +248,8 @@ class _CreateUserFormState extends State<CreateUserForm> {
           'waiterEnabled',
           'customerEnabled',
           'queueReportsEnabled',
-          'adminDisplayEnabled'
+          'adminDisplayEnabled',
+          'todaysViewEnabled', // NEW: Today's View permission
         ],
       },
       {
@@ -396,6 +399,7 @@ class _EditUserScreenState extends State<EditUserScreen> {
       'banquetReportsEnabled': widget.user.banquetReportsEnabled,
       'queueReportsEnabled': widget.user.queueReportsEnabled,
       'adminDisplayEnabled': widget.user.adminDisplayEnabled,
+      'todaysViewEnabled': widget.user.todaysViewEnabled,
       'banquetSetupEnabled': widget.user.banquetSetupEnabled,
       'chefDisplayEnabled': widget.user.chefDisplayEnabled,
       'userManagementEnabled': widget.user.userManagementEnabled,
@@ -424,6 +428,7 @@ class _EditUserScreenState extends State<EditUserScreen> {
       banquetReportsEnabled: _roles['banquetReportsEnabled']!,
       queueReportsEnabled: _roles['queueReportsEnabled']!,
       adminDisplayEnabled: _roles['adminDisplayEnabled']!,
+      todaysViewEnabled: _roles['todaysViewEnabled']!,
       banquetSetupEnabled: _roles['banquetSetupEnabled']!,
       chefDisplayEnabled: _roles['chefDisplayEnabled']!,
       userManagementEnabled: _roles['userManagementEnabled']!,
@@ -517,7 +522,8 @@ class _EditUserScreenState extends State<EditUserScreen> {
           'waiterEnabled',
           'customerEnabled',
           'queueReportsEnabled',
-          'adminDisplayEnabled'
+          'adminDisplayEnabled',
+          'todaysViewEnabled', // NEW: Today's View permission
         ],
       },
       {
