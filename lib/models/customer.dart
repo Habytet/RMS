@@ -13,6 +13,7 @@ class Customer {
   String? operator;
   String? waiterName;
   bool isCalled;
+  int? assignedTableNumber; // Table number assigned to this customer
 
   // --- NEW: A field to hold the branch name for display purposes ---
   // This field is NOT saved to Firestore, it's assigned at runtime by the provider.
@@ -29,6 +30,7 @@ class Customer {
     this.operator,
     this.waiterName,
     this.isCalled = false,
+    this.assignedTableNumber,
     this.branchName, // --- ADDED to constructor ---
   });
 
@@ -44,6 +46,7 @@ class Customer {
       'operator': operator,
       'waiterName': waiterName,
       'isCalled': isCalled,
+      'assignedTableNumber': assignedTableNumber,
       // We don't save branchName here because it's derived from the document's location
     };
   }
@@ -55,11 +58,14 @@ class Customer {
       phone: map['phone'] ?? '',
       pax: map['pax'] ?? 0,
       registeredAt: (map['registeredAt'] as Timestamp).toDate(),
-      calledAt: map['calledAt'] != null ? (map['calledAt'] as Timestamp).toDate() : null,
+      calledAt: map['calledAt'] != null
+          ? (map['calledAt'] as Timestamp).toDate()
+          : null,
       children: map['children'] ?? 0,
       operator: map['operator'],
       waiterName: map['waiterName'],
       isCalled: map['isCalled'] ?? false,
+      assignedTableNumber: map['assignedTableNumber'],
       // branchName is assigned later by the provider, not read from the map
     );
   }

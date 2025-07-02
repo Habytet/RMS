@@ -17,6 +17,7 @@ import 'screens/admin/user_management_screen.dart';
 import 'screens/admin/menu_management_screen.dart';
 import 'screens/admin/branch_management_screen.dart';
 import 'screens/admin/queue_reports_screen.dart';
+import 'screens/admin/banquet_reports_screen.dart';
 import 'screens/queue/admin_display_screen.dart';
 import 'screens/podium_operator_screen.dart';
 import 'screens/waiter_table_screen.dart';
@@ -93,6 +94,7 @@ class MyApp extends StatelessWidget {
         '/admin/menus': (_) => MenuManagementScreen(),
         '/admin/branches': (_) => const BranchManagementScreen(),
         '/admin/queue_reports': (_) => const QueueReportsScreen(),
+        '/admin/banquet_reports': (_) => const BanquetReportsScreen(),
         '/queue/admin_display': (_) => const AdminDisplayScreen(),
         '/podium': (_) => PodiumOperatorScreen(),
         '/waiter': (_) => WaiterTableScreen(),

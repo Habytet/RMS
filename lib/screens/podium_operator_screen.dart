@@ -9,6 +9,7 @@ import '../models/customer.dart';
 import '../models/branch.dart';
 import '../providers/token_provider.dart';
 import '../providers/user_provider.dart';
+import '../models/table.dart';
 
 class PodiumOperatorScreen extends StatefulWidget {
   @override
@@ -135,6 +136,129 @@ class _PodiumOperatorScreenState extends State<PodiumOperatorScreen>
 
     if (confirm == true) {
       await context.read<TokenProvider>().markAsCalled(token);
+    }
+  }
+
+  Future<void> _showTableSelectionDialog(Customer customer) async {
+    final tokenProvider = context.read<TokenProvider>();
+    final availableTables = tokenProvider.availableTables;
+
+    if (availableTables.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No tables available. Please add tables first.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final int? selectedTable = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.table_restaurant, color: Colors.red.shade400),
+            const SizedBox(width: 8),
+            const Text('Select Table'),
+          ],
+        ),
+        content: Container(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Assign table for ${customer.name}',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Flexible(
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    childAspectRatio: 1.2,
+                  ),
+                  itemCount: availableTables.length,
+                  itemBuilder: (context, index) {
+                    final table = availableTables[index];
+                    return GestureDetector(
+                      onTap: () => Navigator.pop(context, table.number),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.red.shade200,
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.table_restaurant,
+                              size: 20,
+                              color: Colors.red.shade600,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Table ${table.number}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red.shade700,
+                              ),
+                            ),
+                            Text(
+                              'Seat ${table.capacity}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.red.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (selectedTable != null) {
+      try {
+        await tokenProvider.assignTableToCustomer(customer, selectedTable);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${customer.name} assigned to Table $selectedTable'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to assign table: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -572,7 +696,7 @@ class _PodiumOperatorScreenState extends State<PodiumOperatorScreen>
                             spacing: 8,
                             runSpacing: 8,
                             children: tables
-                                .map((t) => Container(
+                                .map((table) => Container(
                                       decoration: BoxDecoration(
                                         color: Colors.green.shade100,
                                         borderRadius: BorderRadius.circular(20),
@@ -589,18 +713,35 @@ class _PodiumOperatorScreenState extends State<PodiumOperatorScreen>
                                                 color: Colors.green.shade600,
                                                 size: 16),
                                             const SizedBox(width: 6),
-                                            Text(
-                                              'Table $t',
-                                              style: TextStyle(
-                                                color: Colors.green.shade700,
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 12,
-                                              ),
+                                            Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  'Table ${table.number}',
+                                                  style: TextStyle(
+                                                    color:
+                                                        Colors.green.shade700,
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  'Seat ${table.capacity}',
+                                                  style: TextStyle(
+                                                    color:
+                                                        Colors.green.shade600,
+                                                    fontWeight: FontWeight.w500,
+                                                    fontSize: 10,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                             const SizedBox(width: 4),
                                             GestureDetector(
-                                              onTap: () =>
-                                                  tokenProvider.removeTable(t),
+                                              onTap: () => tokenProvider
+                                                  .removeTable(table.number),
                                               child: Icon(Icons.close,
                                                   color: Colors.green.shade600,
                                                   size: 16),
@@ -711,7 +852,7 @@ class _PodiumOperatorScreenState extends State<PodiumOperatorScreen>
 
                                   return Dismissible(
                                     key: ValueKey(c.token),
-                                    direction: DismissDirection.startToEnd,
+                                    direction: DismissDirection.horizontal,
                                     onDismissed: (_) {
                                       final waiterName = context
                                               .read<UserProvider>()
@@ -746,6 +887,41 @@ class _PodiumOperatorScreenState extends State<PodiumOperatorScreen>
                                         ],
                                       ),
                                     ),
+                                    secondaryBackground: Container(
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange.shade400,
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      alignment: Alignment.centerRight,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 20),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.end,
+                                        children: [
+                                          Text(
+                                            'Assign Table',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Icon(Icons.table_restaurant,
+                                              color: Colors.white),
+                                        ],
+                                      ),
+                                    ),
+                                    confirmDismiss: (direction) async {
+                                      if (direction ==
+                                          DismissDirection.endToStart) {
+                                        // Swipe left - show table selection
+                                        await _showTableSelectionDialog(c);
+                                        return false; // Don't dismiss the card
+                                      }
+                                      return true; // Allow swipe right to seat customer
+                                    },
                                     child: Container(
                                       margin: const EdgeInsets.only(bottom: 12),
                                       decoration: BoxDecoration(
@@ -828,6 +1004,23 @@ class _PodiumOperatorScreenState extends State<PodiumOperatorScreen>
                                                               FontWeight.w500,
                                                         ),
                                                       ),
+                                                      if (c.assignedTableNumber !=
+                                                          null) ...[
+                                                        const SizedBox(
+                                                            height: 2),
+                                                        Text(
+                                                          'Customer seated in - Table ${c.assignedTableNumber}',
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                            color: isLate
+                                                                ? Colors.white70
+                                                                : Colors.green
+                                                                    .shade600,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ],
                                                   ),
                                                 ),

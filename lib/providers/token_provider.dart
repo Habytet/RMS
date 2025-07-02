@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/customer.dart';
+import '../models/table.dart';
 
 class TokenProvider extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -18,7 +19,7 @@ class TokenProvider extends ChangeNotifier {
   int _nextToken = 1;
   int? _nowServing;
   List<Customer> _queue = [];
-  List<int> _availableTables = [];
+  List<RestaurantTable> _availableTables = [];
   bool _isLoading = true;
 
   // --- Admin-specific state for branch selection ---
@@ -28,7 +29,8 @@ class TokenProvider extends ChangeNotifier {
 
   // --- Getters ---
   List<Customer> get queue => _queue;
-  List<int> get availableTables => List.unmodifiable(_availableTables);
+  List<RestaurantTable> get availableTables =>
+      List.unmodifiable(_availableTables);
   int get nextToken => _nextToken;
   int? get nowServing => _nowServing;
   bool get isLoading => _isLoading;
@@ -82,7 +84,18 @@ class TokenProvider extends ChangeNotifier {
         if (data != null) {
           _nextToken = data['nextToken'] as int? ?? 1;
           _nowServing = data['nowServing'] as int?;
-          _availableTables = List<int>.from(data['availableTables'] ?? []);
+          // Convert the data to RestaurantTable objects
+          final tablesData = data['availableTables'] as List<dynamic>? ?? [];
+          _availableTables = tablesData.map((tableData) {
+            if (tableData is Map<String, dynamic>) {
+              return RestaurantTable.fromMap(tableData);
+            } else if (tableData is int) {
+              // Handle legacy data (just table numbers)
+              return RestaurantTable(
+                  number: tableData, capacity: 4); // Default capacity
+            }
+            return RestaurantTable(number: 0, capacity: 4); // Fallback
+          }).toList();
           notifyListeners();
         }
       });
@@ -133,7 +146,18 @@ class TokenProvider extends ChangeNotifier {
       if (data != null) {
         _nowServing = data['nowServing'] as int?;
         _nextToken = data['nextToken'] as int? ?? 1;
-        _availableTables = List<int>.from(data['availableTables'] ?? []);
+        // Convert the data to RestaurantTable objects
+        final tablesData = data['availableTables'] as List<dynamic>? ?? [];
+        _availableTables = tablesData.map((tableData) {
+          if (tableData is Map<String, dynamic>) {
+            return RestaurantTable.fromMap(tableData);
+          } else if (tableData is int) {
+            // Handle legacy data (just table numbers)
+            return RestaurantTable(
+                number: tableData, capacity: 4); // Default capacity
+          }
+          return RestaurantTable(number: 0, capacity: 4); // Fallback
+        }).toList();
         notifyListeners();
       }
     });
@@ -176,9 +200,8 @@ class TokenProvider extends ChangeNotifier {
     // The real-time listeners will automatically update the UI
   }
 
-  // --- THIS IS THE FIX ---
-  // Reverted the logic back to using a List to allow duplicate table numbers.
-  Future<void> addTable(int tableNumber) async {
+  // Updated to accept both table number and capacity
+  Future<void> addTable(int tableNumber, int capacity) async {
     final String effectiveBranchId = _adminSelectedBranchId ?? branchId;
     if (effectiveBranchId == 'all' || effectiveBranchId.isEmpty) {
       throw Exception("Cannot add table in 'All Branches' view.");
@@ -186,13 +209,29 @@ class TokenProvider extends ChangeNotifier {
     final branchDoc = _firestore.collection('branches').doc(effectiveBranchId);
     await _firestore.runTransaction((tx) async {
       final snap = await tx.get(branchDoc);
-      // Use a List instead of a Set to allow duplicates.
-      final currentTables =
-          List<int>.from(snap.data()?['availableTables'] ?? []);
-      currentTables.add(tableNumber);
+      // Convert existing data to RestaurantTable objects
+      final tablesData =
+          snap.data()?['availableTables'] as List<dynamic>? ?? [];
+      final currentTables = tablesData.map((tableData) {
+        if (tableData is Map<String, dynamic>) {
+          return RestaurantTable.fromMap(tableData);
+        } else if (tableData is int) {
+          // Handle legacy data (just table numbers)
+          return RestaurantTable(
+              number: tableData, capacity: 4); // Default capacity
+        }
+        return RestaurantTable(number: 0, capacity: 4); // Fallback
+      }).toList();
+
+      currentTables
+          .add(RestaurantTable(number: tableNumber, capacity: capacity));
       // Sort the list for consistent display.
-      currentTables.sort();
-      tx.update(branchDoc, {'availableTables': currentTables});
+      currentTables.sort((a, b) => a.number.compareTo(b.number));
+
+      // Convert back to map format for storage
+      final tablesForStorage =
+          currentTables.map((table) => table.toMap()).toList();
+      tx.update(branchDoc, {'availableTables': tablesForStorage});
     });
 
     // The real-time listeners will automatically update the UI
@@ -249,13 +288,70 @@ class TokenProvider extends ChangeNotifier {
     final branchDoc = _firestore.collection('branches').doc(effectiveBranchId);
     await _firestore.runTransaction((tx) async {
       final snap = await tx.get(branchDoc);
-      final currentTables =
-          List<int>.from(snap.data()?['availableTables'] ?? []);
-      // This correctly removes only the first instance of the number, which is what you want.
-      currentTables.remove(tableNumber);
-      tx.update(branchDoc, {'availableTables': currentTables});
+      // Convert existing data to RestaurantTable objects
+      final tablesData =
+          snap.data()?['availableTables'] as List<dynamic>? ?? [];
+      final currentTables = tablesData.map((tableData) {
+        if (tableData is Map<String, dynamic>) {
+          return RestaurantTable.fromMap(tableData);
+        } else if (tableData is int) {
+          // Handle legacy data (just table numbers)
+          return RestaurantTable(
+              number: tableData, capacity: 4); // Default capacity
+        }
+        return RestaurantTable(number: 0, capacity: 4); // Fallback
+      }).toList();
+
+      // Remove the first table with matching number
+      final index =
+          currentTables.indexWhere((table) => table.number == tableNumber);
+      if (index != -1) {
+        currentTables.removeAt(index);
+      }
+
+      // Convert back to map format for storage
+      final tablesForStorage =
+          currentTables.map((table) => table.toMap()).toList();
+      tx.update(branchDoc, {'availableTables': tablesForStorage});
     });
 
     // The real-time listeners will automatically update the UI
+  }
+
+  Future<void> assignTableToCustomer(Customer customer, int tableNumber) async {
+    final String effectiveBranchId = _adminSelectedBranchId ?? branchId;
+    if (effectiveBranchId == 'all' || effectiveBranchId.isEmpty) {
+      throw Exception("Cannot assign table in 'All Branches' view.");
+    }
+
+    final branchDoc = _firestore.collection('branches').doc(effectiveBranchId);
+
+    await _firestore.runTransaction((tx) async {
+      // First, read the branch document to get current available tables
+      final snap = await tx.get(branchDoc);
+      final tablesData =
+          snap.data()?['availableTables'] as List<dynamic>? ?? [];
+      final currentTables = tablesData.map((tableData) {
+        if (tableData is Map<String, dynamic>) {
+          return RestaurantTable.fromMap(tableData);
+        } else if (tableData is int) {
+          // Handle legacy data (just table numbers)
+          return RestaurantTable(number: tableData, capacity: 4);
+        }
+        return RestaurantTable(number: 0, capacity: 4);
+      }).toList();
+
+      // Remove the assigned table
+      currentTables.removeWhere((table) => table.number == tableNumber);
+
+      // Convert back to map format for storage
+      final tablesForStorage =
+          currentTables.map((table) => table.toMap()).toList();
+
+      // Now perform all writes after all reads
+      tx.update(branchDoc.collection('queue').doc(customer.token.toString()),
+          {'assignedTableNumber': tableNumber});
+      tx.update(branchDoc, {'availableTables': tablesForStorage});
+    });
   }
 }

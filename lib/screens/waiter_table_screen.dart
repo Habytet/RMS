@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../providers/token_provider.dart';
 import '../providers/user_provider.dart';
 import '../models/branch.dart';
+import '../models/table.dart';
 
 class WaiterTableScreen extends StatefulWidget {
   const WaiterTableScreen({super.key});
@@ -16,6 +17,7 @@ class WaiterTableScreen extends StatefulWidget {
 
 class _WaiterTableScreenState extends State<WaiterTableScreen> {
   final _tableController = TextEditingController();
+  final _capacityController = TextEditingController();
   final _focusNode = FocusNode();
   Timer? _timer; // To refresh the waiting time display
 
@@ -36,6 +38,7 @@ class _WaiterTableScreenState extends State<WaiterTableScreen> {
   @override
   void dispose() {
     _tableController.dispose();
+    _capacityController.dispose();
     _focusNode.dispose();
     _timer?.cancel(); // Make sure to cancel the timer to prevent memory leaks.
     super.dispose();
@@ -150,7 +153,7 @@ class _WaiterTableScreenState extends State<WaiterTableScreen> {
             ],
           ),
         ),
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
@@ -178,7 +181,8 @@ class _WaiterTableScreenState extends State<WaiterTableScreen> {
     );
   }
 
-  Widget _buildStatisticsSection(List<int> tables, List<dynamic> queue) {
+  Widget _buildStatisticsSection(
+      List<RestaurantTable> tables, List<dynamic> queue) {
     final totalWaiting = queue.length;
     int totalAdults = 0;
     int totalChildren = 0;
@@ -301,45 +305,48 @@ class _WaiterTableScreenState extends State<WaiterTableScreen> {
   Widget _buildStatCard(String title, String value, IconData icon,
       Color bgColor, Color iconColor) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(icon, color: iconColor, size: 20),
-              Spacer(),
-            ],
-          ),
-          SizedBox(height: 12),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade800,
+          Icon(icon, color: iconColor, size: 28),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: iconColor,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-          ),
-          SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAvailableTablesSection(List<int> tables) {
+  Widget _buildAvailableTablesSection(List<RestaurantTable> tables) {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(20),
@@ -416,13 +423,13 @@ class _WaiterTableScreenState extends State<WaiterTableScreen> {
                       crossAxisCount: 4,
                       crossAxisSpacing: 8,
                       mainAxisSpacing: 8,
-                      childAspectRatio: 1.2,
+                      childAspectRatio: 1.0,
                     ),
                     itemCount: tables.length,
                     itemBuilder: (context, index) {
-                      final tableNumber = tables[index];
+                      final table = tables[index];
                       return GestureDetector(
-                        onTap: () => _removeTable(tableNumber),
+                        onTap: () => _removeTable(table),
                         child: Container(
                           decoration: BoxDecoration(
                             color: Colors.red.shade50,
@@ -437,22 +444,32 @@ class _WaiterTableScreenState extends State<WaiterTableScreen> {
                             children: [
                               Icon(
                                 Icons.table_restaurant,
-                                size: 24,
+                                size: 20,
                                 color: Colors.red.shade600,
                               ),
-                              SizedBox(height: 4),
+                              SizedBox(height: 2),
                               Text(
-                                'Table $tableNumber',
+                                'Table ${table.number}',
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.red.shade700,
                                 ),
                               ),
+                              SizedBox(height: 1),
+                              Text(
+                                'Seat ${table.capacity}',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.red.shade600,
+                                ),
+                              ),
+                              SizedBox(height: 1),
                               Text(
                                 'Tap to remove',
                                 style: TextStyle(
-                                  fontSize: 8,
+                                  fontSize: 7,
                                   color: Colors.grey.shade500,
                                 ),
                               ),
@@ -504,32 +521,89 @@ class _WaiterTableScreenState extends State<WaiterTableScreen> {
           Row(
             children: [
               Expanded(
-                child: TextField(
-                  controller: _tableController,
-                  focusNode: _focusNode,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: 'Enter table number',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Table Number',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                      ),
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    SizedBox(height: 4),
+                    TextField(
+                      controller: _tableController,
+                      focusNode: _focusNode,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: 'Enter',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide:
+                              BorderSide(color: Colors.red.shade400, width: 2),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        prefixIcon: Icon(Icons.table_restaurant,
+                            color: Colors.red.shade400, size: 20),
+                      ),
                     ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          BorderSide(color: Colors.red.shade400, width: 2),
+                  ],
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Seating Capacity',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                      ),
                     ),
-                    filled: true,
-                    fillColor: Colors.grey.shade50,
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    prefixIcon: Icon(Icons.table_restaurant,
-                        color: Colors.red.shade400),
-                  ),
+                    SizedBox(height: 4),
+                    TextField(
+                      controller: _capacityController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: 'Enter',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide:
+                              BorderSide(color: Colors.red.shade400, width: 2),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        prefixIcon: Icon(Icons.chair,
+                            color: Colors.red.shade400, size: 20),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               SizedBox(width: 12),
@@ -540,31 +614,38 @@ class _WaiterTableScreenState extends State<WaiterTableScreen> {
                     colors: [Colors.red.shade400, Colors.red.shade600],
                   ),
                 ),
-                child: ElevatedButton(
-                  onPressed: _addTable,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.add, color: Colors.white, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'Add',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    SizedBox(height: 4), // Space to align with text fields
+                    ElevatedButton(
+                      onPressed: _addTable,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                    ],
-                  ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add, color: Colors.white, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Add',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -575,252 +656,249 @@ class _WaiterTableScreenState extends State<WaiterTableScreen> {
   }
 
   Widget _buildCustomersWaitingSection(List queue) {
-    return Expanded(
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.people, color: Colors.red.shade400),
-                SizedBox(width: 8),
-                Text(
-                  'Customers Waiting',
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.people, color: Colors.red.shade400),
+              SizedBox(width: 8),
+              Text(
+                'Customers Waiting',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red.shade600,
+                ),
+              ),
+              Spacer(),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  '${queue.length} customers',
                   style: TextStyle(
-                    fontSize: 16,
+                    color: Colors.red.shade700,
                     fontWeight: FontWeight.w600,
-                    color: Colors.red.shade600,
+                    fontSize: 12,
                   ),
                 ),
-                Spacer(),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade100,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    '${queue.length} customers',
-                    style: TextStyle(
-                      color: Colors.red.shade700,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
-            Expanded(
-              child: queue.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.queue_music,
-                            size: 64,
-                            color: Colors.grey.shade400,
-                          ),
-                          SizedBox(height: 16),
-                          Text(
-                            'No customers waiting',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'The queue is currently empty',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                        ],
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+          queue.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.queue_music,
+                        size: 64,
+                        color: Colors.grey.shade400,
                       ),
-                    )
-                  : ListView.builder(
-                      itemCount: queue.length,
-                      itemBuilder: (context, index) {
-                        final c = queue[index];
-                        final duration =
-                            DateTime.now().difference(c.registeredAt);
-                        final isLate = duration.inMinutes >= 15;
+                      SizedBox(height: 16),
+                      Text(
+                        'No customers waiting',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'The queue is currently empty',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : Container(
+                  height: 400, // Fixed height for scrolling
+                  child: ListView.builder(
+                    itemCount: queue.length,
+                    itemBuilder: (context, index) {
+                      final c = queue[index];
+                      final duration =
+                          DateTime.now().difference(c.registeredAt);
+                      final isLate = duration.inMinutes >= 15;
 
-                        return Container(
-                          margin: EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: isLate ? Colors.red.shade400 : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: c.isCalled
-                                  ? Colors.green
-                                  : Colors.transparent,
-                              width: 2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 8,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
+                      return Container(
+                        margin: EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: isLate ? Colors.red.shade400 : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color:
+                                c.isCalled ? Colors.green : Colors.transparent,
+                            width: 2,
                           ),
-                          child: Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: isLate
-                                            ? Colors.white.withOpacity(0.2)
-                                            : Colors.blue.shade100,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Icon(
-                                        Icons.person,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: isLate
+                                          ? Colors.white.withOpacity(0.2)
+                                          : Colors.blue.shade100,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      Icons.person,
+                                      color: isLate
+                                          ? Colors.white
+                                          : Colors.blue.shade600,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          c.name,
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: isLate
+                                                ? Colors.white
+                                                : Colors.grey.shade800,
+                                          ),
+                                        ),
+                                        SizedBox(height: 4),
+                                        Text(
+                                          'Token: ${c.token}',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: isLate
+                                                ? Colors.white70
+                                                : Colors.grey.shade600,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: isLate
+                                          ? Colors.white.withOpacity(0.2)
+                                          : Colors.orange.shade100,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Text(
+                                      '${duration.inMinutes} mins',
+                                      style: TextStyle(
                                         color: isLate
                                             ? Colors.white
-                                            : Colors.blue.shade600,
-                                        size: 20,
+                                            : Colors.orange.shade700,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12,
                                       ),
                                     ),
-                                    SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  _buildInfoChip(
+                                    '${c.pax} Adults',
+                                    Icons.person,
+                                    isLate
+                                        ? Colors.white.withOpacity(0.2)
+                                        : Colors.blue.shade100,
+                                    isLate
+                                        ? Colors.white
+                                        : Colors.blue.shade600,
+                                  ),
+                                  SizedBox(width: 8),
+                                  _buildInfoChip(
+                                    '${c.children} Kids',
+                                    Icons.child_care,
+                                    isLate
+                                        ? Colors.white.withOpacity(0.2)
+                                        : Colors.orange.shade100,
+                                    isLate
+                                        ? Colors.white
+                                        : Colors.orange.shade600,
+                                  ),
+                                  if (c.isCalled) ...[
+                                    Spacer(),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.shade100,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
+                                          Icon(Icons.check_circle,
+                                              size: 14,
+                                              color: Colors.green.shade600),
+                                          SizedBox(width: 4),
                                           Text(
-                                            c.name,
+                                            'Called',
                                             style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: isLate
-                                                  ? Colors.white
-                                                  : Colors.grey.shade800,
-                                            ),
-                                          ),
-                                          SizedBox(height: 4),
-                                          Text(
-                                            'Token: ${c.token}',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: isLate
-                                                  ? Colors.white70
-                                                  : Colors.grey.shade600,
-                                              fontWeight: FontWeight.w500,
+                                              fontSize: 11,
+                                              color: Colors.green.shade600,
+                                              fontWeight: FontWeight.w600,
                                             ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                    Container(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: isLate
-                                            ? Colors.white.withOpacity(0.2)
-                                            : Colors.orange.shade100,
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: Text(
-                                        '${duration.inMinutes} mins',
-                                        style: TextStyle(
-                                          color: isLate
-                                              ? Colors.white
-                                              : Colors.orange.shade700,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
                                   ],
-                                ),
-                                SizedBox(height: 12),
-                                Row(
-                                  children: [
-                                    _buildInfoChip(
-                                      '${c.pax} Adults',
-                                      Icons.person,
-                                      isLate
-                                          ? Colors.white.withOpacity(0.2)
-                                          : Colors.blue.shade100,
-                                      isLate
-                                          ? Colors.white
-                                          : Colors.blue.shade600,
-                                    ),
-                                    SizedBox(width: 8),
-                                    _buildInfoChip(
-                                      '${c.children} Kids',
-                                      Icons.child_care,
-                                      isLate
-                                          ? Colors.white.withOpacity(0.2)
-                                          : Colors.orange.shade100,
-                                      isLate
-                                          ? Colors.white
-                                          : Colors.orange.shade600,
-                                    ),
-                                    if (c.isCalled) ...[
-                                      Spacer(),
-                                      Container(
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.green.shade100,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(Icons.check_circle,
-                                                size: 14,
-                                                color: Colors.green.shade600),
-                                            SizedBox(width: 4),
-                                            Text(
-                                              'Called',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                color: Colors.green.shade600,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ],
-                            ),
+                                ],
+                              ),
+                            ],
                           ),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+        ],
       ),
     );
   }
@@ -851,12 +929,12 @@ class _WaiterTableScreenState extends State<WaiterTableScreen> {
     );
   }
 
-  void _removeTable(int tableNumber) {
+  void _removeTable(RestaurantTable table) {
     final tokenProvider = context.read<TokenProvider>();
-    tokenProvider.removeTable(tableNumber);
+    tokenProvider.removeTable(table.number);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Table $tableNumber removed'),
+        content: Text('Table ${table.number} removed'),
         backgroundColor: Colors.orange.shade600,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
@@ -867,16 +945,20 @@ class _WaiterTableScreenState extends State<WaiterTableScreen> {
   }
 
   void _addTable() {
-    final text = _tableController.text.trim();
-    final tableNum = int.tryParse(text);
-    if (tableNum != null && tableNum > 0) {
+    final tableText = _tableController.text.trim();
+    final capacityText = _capacityController.text.trim();
+    final tableNum = int.tryParse(tableText);
+    final capacity = int.tryParse(capacityText);
+
+    if (tableNum != null && tableNum > 0 && capacity != null && capacity > 0) {
       final tokenProvider = context.read<TokenProvider>();
-      tokenProvider.addTable(tableNum);
+      tokenProvider.addTable(tableNum, capacity);
       _tableController.clear();
+      _capacityController.clear();
       _focusNode.unfocus();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Table $tableNum added successfully'),
+          content: Text('Table $tableNum (Seat $capacity) added successfully'),
           backgroundColor: Colors.green.shade600,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -887,7 +969,7 @@ class _WaiterTableScreenState extends State<WaiterTableScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Please enter a valid table number'),
+          content: Text('Please enter valid table number and seating capacity'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(

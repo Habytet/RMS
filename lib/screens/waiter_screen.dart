@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/token_provider.dart';
+import '../models/table.dart';
 
 class WaiterScreen extends StatefulWidget {
   @override
@@ -9,11 +10,13 @@ class WaiterScreen extends StatefulWidget {
 
 class _WaiterScreenState extends State<WaiterScreen> {
   final _tableController = TextEditingController();
+  final _capacityController = TextEditingController();
   final _focusNode = FocusNode();
 
   @override
   void dispose() {
     _tableController.dispose();
+    _capacityController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
@@ -85,7 +88,7 @@ class _WaiterScreenState extends State<WaiterScreen> {
     );
   }
 
-  Widget _buildStatisticsSection(List<int> tables) {
+  Widget _buildStatisticsSection(List<RestaurantTable> tables) {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(20),
@@ -277,6 +280,34 @@ class _WaiterScreenState extends State<WaiterScreen> {
                 ),
               ),
               SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _capacityController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    hintText: 'Enter seating capacity',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          BorderSide(color: Colors.red.shade400, width: 2),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    prefixIcon: Icon(Icons.chair, color: Colors.red.shade400),
+                  ),
+                ),
+              ),
+              SizedBox(width: 12),
               Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
@@ -286,14 +317,23 @@ class _WaiterScreenState extends State<WaiterScreen> {
                 ),
                 child: ElevatedButton(
                   onPressed: () {
-                    final table = int.tryParse(_tableController.text.trim());
-                    if (table != null && table > 0) {
-                      provider.addTable(table);
+                    final tableText = _tableController.text.trim();
+                    final capacityText = _capacityController.text.trim();
+                    final table = int.tryParse(tableText);
+                    final capacity = int.tryParse(capacityText);
+
+                    if (table != null &&
+                        table > 0 &&
+                        capacity != null &&
+                        capacity > 0) {
+                      provider.addTable(table, capacity);
                       _tableController.clear();
+                      _capacityController.clear();
                       _focusNode.unfocus();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Table $table added successfully'),
+                          content: Text(
+                              'Table $table (Seat $capacity) added successfully'),
                           backgroundColor: Colors.green.shade600,
                           behavior: SnackBarBehavior.floating,
                           shape: RoundedRectangleBorder(
@@ -304,7 +344,8 @@ class _WaiterScreenState extends State<WaiterScreen> {
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Please enter a valid table number'),
+                          content: Text(
+                              'Please enter valid table number and seating capacity'),
                           backgroundColor: Colors.red.shade600,
                           behavior: SnackBarBehavior.floating,
                           shape: RoundedRectangleBorder(
@@ -347,7 +388,7 @@ class _WaiterScreenState extends State<WaiterScreen> {
   }
 
   Widget _buildAvailableTablesSection(
-      List<int> tables, TokenProvider provider) {
+      List<RestaurantTable> tables, TokenProvider provider) {
     return Expanded(
       child: Container(
         width: double.infinity,
@@ -454,10 +495,11 @@ class _WaiterScreenState extends State<WaiterScreen> {
                                 right: 8,
                                 child: GestureDetector(
                                   onTap: () {
-                                    provider.removeTable(table);
+                                    provider.removeTable(table.number);
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text('Table $table removed'),
+                                        content: Text(
+                                            'Table ${table.number} removed'),
                                         backgroundColor: Colors.orange.shade600,
                                         behavior: SnackBarBehavior.floating,
                                         shape: RoundedRectangleBorder(
@@ -500,11 +542,19 @@ class _WaiterScreenState extends State<WaiterScreen> {
                                       ),
                                     ),
                                     Text(
-                                      '$table',
+                                      '${table.number}',
                                       style: TextStyle(
                                         fontSize: 20,
                                         fontWeight: FontWeight.bold,
                                         color: Colors.red.shade700,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Seat ${table.capacity}',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.red.shade600,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                   ],

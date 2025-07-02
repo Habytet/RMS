@@ -733,6 +733,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     final items = <Map<String, String>>[];
     if (user.queueReportsEnabled || user.isAdmin)
       items.add({'title': 'Queue Reports', 'route': '/admin/queue_reports'});
+    if (user.banquetReportsEnabled || user.isAdmin)
+      items
+          .add({'title': 'Banquet Reports', 'route': '/admin/banquet_reports'});
     _openSubMenu(context, 'Reports', items);
   }
 
