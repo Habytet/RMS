@@ -49,7 +49,8 @@ class _BanquetReportsScreenState extends State<BanquetReportsScreen> {
         TextCellValue(b.hallSlots
             .map((hs) => '${hs['hallName']} - ${hs['slotLabel']}')
             .join(", ")),
-        TextCellValue(b.slotLabel),
+        TextCellValue(
+            b.hallSlots.map((hs) => hs['slotLabel'] ?? '').join(", ")),
         TextCellValue(b.customerName),
         TextCellValue(b.phone),
         TextCellValue(b.pax.toString()),
@@ -139,7 +140,9 @@ class _BanquetReportsScreenState extends State<BanquetReportsScreen> {
                     DataCell(Text(b.hallSlots
                         .map((hs) => '${hs['hallName']} - ${hs['slotLabel']}')
                         .join(", "))),
-                    DataCell(Text(b.slotLabel)),
+                    DataCell(Text(b.hallSlots
+                        .map((hs) => hs['slotLabel'] ?? '')
+                        .join(", "))),
                     DataCell(Text(b.customerName)),
                     DataCell(Text(b.phone)),
                     DataCell(Text(b.pax.toString())),

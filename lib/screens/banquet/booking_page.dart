@@ -1130,12 +1130,12 @@ class _BookingPageState extends State<BookingPage> {
                             ),
                             SizedBox(height: 12),
                             ElevatedButton.icon(
-                              icon: Icon(Icons.edit, size: 18),
+                              //icon: Icon(Icons.edit, size: 18),
                               label: Text('Edit Menu Items'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blue.shade600,
                                 foregroundColor: Colors.white,
-                                padding: EdgeInsets.symmetric(vertical: 12),
+                                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 12),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),

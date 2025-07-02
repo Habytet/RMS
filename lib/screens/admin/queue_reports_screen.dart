@@ -82,16 +82,16 @@ class _QueueReportsScreenState extends State<QueueReportsScreen> {
               .collection('branches')
               .doc(branchId)
               .collection('completed')
-              .orderBy('calledAt', descending: true)
+              .orderBy('seatedAt', descending: true)
               .limit(100); // Limit per branch to prevent performance issues
 
           // Apply date filters if they exist
           if (_range != null) {
             query =
-                query.where('calledAt', isGreaterThanOrEqualTo: _range!.start);
+                query.where('seatedAt', isGreaterThanOrEqualTo: _range!.start);
             final endOfDay = DateTime(_range!.end.year, _range!.end.month,
                 _range!.end.day, 23, 59, 59);
-            query = query.where('calledAt', isLessThanOrEqualTo: endOfDay);
+            query = query.where('seatedAt', isLessThanOrEqualTo: endOfDay);
           }
 
           final snapshot = await query.get();
@@ -106,25 +106,25 @@ class _QueueReportsScreenState extends State<QueueReportsScreen> {
           allCustomers.addAll(branchCustomers);
         }
 
-        // Sort all customers by calledAt date
-        allCustomers.sort((a, b) => (b.calledAt ?? DateTime.now())
-            .compareTo(a.calledAt ?? DateTime.now()));
+        // Sort all customers by seatedAt date
+        allCustomers.sort((a, b) => (b.seatedAt ?? DateTime.now())
+            .compareTo(a.seatedAt ?? DateTime.now()));
       } else {
         // Fetch data from specific branch
         Query query = FirebaseFirestore.instance
             .collection('branches')
             .doc(_selectedBranchId)
             .collection('completed')
-            .orderBy('calledAt', descending: true)
+            .orderBy('seatedAt', descending: true)
             .limit(200); // Limit to prevent performance issues
 
         // Apply date filters if they exist
         if (_range != null) {
           query =
-              query.where('calledAt', isGreaterThanOrEqualTo: _range!.start);
+              query.where('seatedAt', isGreaterThanOrEqualTo: _range!.start);
           final endOfDay = DateTime(
               _range!.end.year, _range!.end.month, _range!.end.day, 23, 59, 59);
-          query = query.where('calledAt', isLessThanOrEqualTo: endOfDay);
+          query = query.where('seatedAt', isLessThanOrEqualTo: endOfDay);
         }
 
         final snapshot = await query.get();
@@ -268,26 +268,29 @@ class _QueueReportsScreenState extends State<QueueReportsScreen> {
           .value = TextCellValue('PAX');
       sheet
           .cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: 0))
-          .value = TextCellValue('Seated At');
+          .value = TextCellValue('Registered At');
       sheet
           .cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: 0))
-          .value = TextCellValue('Wait Time (mins)');
+          .value = TextCellValue('Seated At');
       sheet
           .cell(CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: 0))
-          .value = TextCellValue('Called At');
+          .value = TextCellValue('Wait Time (mins)');
       sheet
           .cell(CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: 0))
-          .value = TextCellValue('Operator');
+          .value = TextCellValue('Called At');
       sheet
           .cell(CellIndex.indexByColumnRow(columnIndex: 8, rowIndex: 0))
+          .value = TextCellValue('Operator');
+      sheet
+          .cell(CellIndex.indexByColumnRow(columnIndex: 9, rowIndex: 0))
           .value = TextCellValue('Waiter');
 
       // Add data
       for (int i = 0; i < _customers.length; i++) {
         final customer = _customers[i];
         final rowIndex = i + 1;
-        final waitTime = customer.calledAt != null
-            ? customer.calledAt!.difference(customer.registeredAt).inMinutes
+        final waitTime = customer.seatedAt != null
+            ? customer.seatedAt!.difference(customer.registeredAt).inMinutes
             : 0;
 
         sheet
@@ -315,21 +318,28 @@ class _QueueReportsScreenState extends State<QueueReportsScreen> {
         sheet
             .cell(
                 CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: rowIndex))
-            .value = IntCellValue(waitTime);
+            .value = TextCellValue(customer.seatedAt !=
+                null
+            ? DateFormat('dd/MM/yyyy HH:mm').format(customer.seatedAt!)
+            : 'N/A');
         sheet
             .cell(
                 CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: rowIndex))
+            .value = IntCellValue(waitTime);
+        sheet
+            .cell(
+                CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: rowIndex))
             .value = TextCellValue(customer.calledAt !=
                 null
             ? DateFormat('dd/MM/yyyy HH:mm').format(customer.calledAt!)
             : 'N/A');
         sheet
             .cell(
-                CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: rowIndex))
+                CellIndex.indexByColumnRow(columnIndex: 8, rowIndex: rowIndex))
             .value = TextCellValue(customer.operator ?? 'N/A');
         sheet
             .cell(
-                CellIndex.indexByColumnRow(columnIndex: 8, rowIndex: rowIndex))
+                CellIndex.indexByColumnRow(columnIndex: 9, rowIndex: rowIndex))
             .value = TextCellValue(customer.waiterName ?? 'N/A');
       }
 
@@ -393,9 +403,9 @@ class _QueueReportsScreenState extends State<QueueReportsScreen> {
     int totalPAX = 0;
 
     for (var customer in _customers) {
-      if (customer.calledAt != null) {
+      if (customer.seatedAt != null) {
         final waitTime =
-            customer.calledAt!.difference(customer.registeredAt).inMinutes;
+            customer.seatedAt!.difference(customer.registeredAt).inMinutes;
         totalWaitTime += waitTime;
         customersWithWaitTime++;
       }
@@ -774,13 +784,14 @@ class _QueueReportsScreenState extends State<QueueReportsScreen> {
                                   if (_selectedBranchId == 'all')
                                     DataColumn(label: Text('Branch')),
                                   DataColumn(label: Text('PAX')),
+                                  DataColumn(label: Text('Registered At')),
                                   DataColumn(label: Text('Seated At')),
                                   DataColumn(label: Text('Wait Time')),
                                   DataColumn(label: Text('Operator')),
                                 ],
                                 rows: _customers.map((customer) {
-                                  final waitTime = customer.calledAt != null
-                                      ? customer.calledAt!
+                                  final waitTime = customer.seatedAt != null
+                                      ? customer.seatedAt!
                                           .difference(customer.registeredAt)
                                           .inMinutes
                                           .toString()
@@ -792,9 +803,11 @@ class _QueueReportsScreenState extends State<QueueReportsScreen> {
                                       DataCell(
                                           Text(customer.branchName ?? 'N/A')),
                                     DataCell(Text('${customer.pax}')),
-                                    DataCell(Text(customer.registeredAt != null
+                                    DataCell(Text(DateFormat('dd MMM, HH:mm')
+                                        .format(customer.registeredAt))),
+                                    DataCell(Text(customer.seatedAt != null
                                         ? DateFormat('dd MMM, HH:mm')
-                                            .format(customer.registeredAt)
+                                            .format(customer.seatedAt!)
                                         : '-')),
                                     DataCell(Text('$waitTime mins')),
                                     DataCell(Text(customer.operator ?? 'N/A')),

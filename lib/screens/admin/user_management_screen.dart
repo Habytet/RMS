@@ -21,20 +21,54 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        backgroundColor: Colors.grey.shade50,
         appBar: AppBar(
-          title: const Text('User Management'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Existing Users'),
-              Tab(text: 'Create New User'),
+          title: const Text(
+            'User Management',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: Colors.red.shade400,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          bottom: TabBar(
+            indicatorColor: Colors.white,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white.withOpacity(0.7),
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+            tabs: const [
+              Tab(
+                icon: Icon(Icons.people),
+                text: 'Existing Users',
+              ),
+              Tab(
+                icon: Icon(Icons.person_add),
+                text: 'Create New User',
+              ),
             ],
           ),
         ),
-        body: const TabBarView(
-          children: [
-            ExistingUsersList(),
-            CreateUserForm(),
-          ],
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.red.shade50,
+                Colors.white,
+              ],
+            ),
+          ),
+          child: const TabBarView(
+            children: [
+              ExistingUsersList(),
+              CreateUserForm(),
+            ],
+          ),
         ),
       ),
     );
@@ -52,7 +86,11 @@ class ExistingUsersList extends StatelessWidget {
     final isLoadingUsers = userProvider.isLoadingUsers;
 
     if (isLoadingUsers) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+        ),
+      );
     }
 
     // Filter users based on current user's branch if not admin
@@ -66,66 +104,258 @@ class ExistingUsersList extends StatelessWidget {
     }
 
     if (filteredUsers.isEmpty) {
-      return const Center(child: Text('No users found.'));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.people_outline,
+              size: 64,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No users found',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Create your first user in the "Create New User" tab',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade500,
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     return ListView(
-      padding: const EdgeInsets.all(8),
-      children: filteredUsers.map((user) {
-        // Find the document ID for the user to pass to EditUserScreen
-        // This is a bit inefficient if `userProvider.users` only provides AppUser objects without their Firestore UIDs
-        // A better approach would be to fetch (user, docId) pairs in UserProvider or query Firestore directly here.
-        // For now, assuming UserProvider.users contains the full list of AppUser objects which we can find by email.
-        // A more robust solution might involve passing the Firebase User UID from `AppUser` model directly.
-        // For current implementation, let's assume `userProvider.users` returns AppUser with an accessible Firebase UID or query by email.
-        // Since `AppUser` doesn't store UID explicitly, let's try to pass email as a proxy for the document ID, assuming it's the doc ID.
-        // REVISIT: The current `UserProvider.users` returns `List<AppUser>` where AppUser *doesn't* contain the Firestore UID.
-        // The `ExistingUsersList` needs `doc.id` for `EditUserScreen`.
-        // The `UserProvider` should preferably expose a `Map<String, AppUser>` where key is UID or `List<MapEntry<String, AppUser>>`.
-        // For simplicity *now*, let's query the specific user document ID using their email. This will add extra reads.
-        // A better long-term fix is in UserProvider to expose UID.
-
-        // Temporarily, we'll assume the email IS the docId for existing users
-        // This is a dangerous assumption if Firebase UIDs are used as document IDs.
-        // Reverting to previous StreamBuilder on `users` collection to get doc.id.
-        // This means `ExistingUsersList` does *not* directly use `userProvider.users` for the list.
-        // It relies on a direct stream from Firestore, which includes doc.id.
-        return FutureBuilder<QuerySnapshot>(
-          future: FirebaseFirestore.instance
-              .collection('users')
-              .where('email', isEqualTo: user.email)
-              .limit(1)
-              .get(),
-          builder: (context, docSnapshot) {
-            if (docSnapshot.connectionState == ConnectionState.waiting) {
-              return const SizedBox.shrink(); // Or a shimmer effect
-            }
-            if (docSnapshot.hasError ||
-                !docSnapshot.hasData ||
-                docSnapshot.data!.docs.isEmpty) {
-              return const SizedBox
-                  .shrink(); // Error or user not found, hide this entry
-            }
-            final docId = docSnapshot.data!.docs.first.id;
-            return Card(
-              child: ListTile(
-                title: Text(user.username.isEmpty ? user.email : user.username),
-                subtitle: Text(user.email),
-                trailing: const Icon(Icons.edit, color: Colors.blue),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => EditUserScreen(userId: docId, user: user),
-                    ),
-                  );
-                },
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Header
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
               ),
-            );
-          },
-        );
-      }).toList(),
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.people, color: Colors.red.shade400, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Manage Users',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    Text(
+                      '${filteredUsers.length} user${filteredUsers.length == 1 ? '' : 's'} found',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Users List
+        ...filteredUsers.map((user) {
+          return FutureBuilder<QuerySnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('users')
+                .where('email', isEqualTo: user.email)
+                .limit(1)
+                .get(),
+            builder: (context, docSnapshot) {
+              if (docSnapshot.connectionState == ConnectionState.waiting) {
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 5,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: const Row(
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              height: 16,
+                              child: LinearProgressIndicator(),
+                            ),
+                            SizedBox(height: 8),
+                            SizedBox(
+                              height: 12,
+                              child: LinearProgressIndicator(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              if (docSnapshot.hasError ||
+                  !docSnapshot.hasData ||
+                  docSnapshot.data!.docs.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              final docId = docSnapshot.data!.docs.first.id;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 5,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.red.shade100,
+                    child: Icon(
+                      Icons.person,
+                      color: Colors.red.shade600,
+                    ),
+                  ),
+                  title: Text(
+                    user.username.isEmpty ? user.email : user.username,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Text(
+                        user.email,
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getBranchColor(user.branchId),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          _getBranchName(user.branchId, userProvider.branches),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  trailing: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.edit,
+                      color: Colors.red.shade600,
+                      size: 20,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            EditUserScreen(userId: docId, user: user),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          );
+        }).toList(),
+      ],
     );
+  }
+
+  Color _getBranchColor(String branchId) {
+    switch (branchId) {
+      case 'all':
+        return Colors.purple.shade600;
+      case 'branch1':
+        return Colors.blue.shade600;
+      case 'branch2':
+        return Colors.green.shade600;
+      case 'branch3':
+        return Colors.orange.shade600;
+      default:
+        return Colors.grey.shade600;
+    }
+  }
+
+  String _getBranchName(String branchId, List<dynamic> branches) {
+    if (branchId == 'all') return 'Corporate';
+    try {
+      final branch = branches.firstWhere(
+        (b) => b.id == branchId,
+      );
+      return branch.name ?? 'Unknown Branch';
+    } catch (e) {
+      return 'Unknown Branch';
+    }
   }
 }
 
@@ -150,18 +380,18 @@ class _CreateUserFormState extends State<CreateUserForm> {
     'banquetReportsEnabled': false,
     'queueReportsEnabled': false,
     'adminDisplayEnabled': false,
-    'todaysViewEnabled': false, // NEW: Today's View permission
+    'todaysViewEnabled': false,
     'banquetSetupEnabled': false,
-    'chefDisplayEnabled': false, // NEW: Chef Display permission
+    'chefDisplayEnabled': false,
     'userManagementEnabled': false,
     'menuManagementEnabled': false,
     'branchManagementEnabled': false,
-    'canViewOwnTasks': false, // NEW: Task-related permission
-    'canSubmitTasks': false, // NEW: Task-related permission
-    'canViewStaffTasks': false, // NEW: Task-related permission
-    'canCreateTasks': false, // NEW: Task-related permission
-    'canEditAssignedTasks': false, // NEW: Task-related permission
-    'canReassignTasks': false, // NEW: Task-related permission
+    'canViewOwnTasks': false,
+    'canSubmitTasks': false,
+    'canViewStaffTasks': false,
+    'canCreateTasks': false,
+    'canEditAssignedTasks': false,
+    'canReassignTasks': false,
   };
 
   @override
@@ -193,7 +423,6 @@ class _CreateUserFormState extends State<CreateUserForm> {
       userManagementEnabled: _roles['userManagementEnabled']!,
       menuManagementEnabled: _roles['menuManagementEnabled']!,
       branchManagementEnabled: _roles['branchManagementEnabled']!,
-      // NEW: Assign task-related permissions
       canSubmitTasks: _roles['canSubmitTasks']!,
       canViewStaffTasks: _roles['canViewStaffTasks']!,
       canCreateTasks: _roles['canCreateTasks']!,
@@ -213,7 +442,7 @@ class _CreateUserFormState extends State<CreateUserForm> {
         _passwordController.clear();
         setState(() {
           _selectedBranchId = null;
-          _roles.updateAll((key, value) => false); // Reset all toggles
+          _roles.updateAll((key, value) => false);
         });
       }
     } on FirebaseAuthException catch (e) {
@@ -227,7 +456,6 @@ class _CreateUserFormState extends State<CreateUserForm> {
 
   @override
   Widget build(BuildContext context) {
-    // FIX: Watch the provider to get branches AND the loading state
     final userProvider = context.watch<UserProvider>();
     final branches = userProvider.branches;
     final isLoadingBranches = userProvider.isLoadingBranches;
@@ -239,21 +467,24 @@ class _CreateUserFormState extends State<CreateUserForm> {
           DropdownMenuItem(value: branch.id, child: Text(branch.name))),
     ];
 
-    // --- NEW: Group permissions for better UI ---
     final List<Map<String, dynamic>> permissionGroups = [
       {
         'title': 'Queue & Podium',
+        'icon': Icons.queue,
+        'color': Colors.blue,
         'keys': [
           'podiumEnabled',
           'waiterEnabled',
           'customerEnabled',
           'queueReportsEnabled',
           'adminDisplayEnabled',
-          'todaysViewEnabled', // NEW: Today's View permission
+          'todaysViewEnabled',
         ],
       },
       {
         'title': 'Banquet',
+        'icon': Icons.event,
+        'color': Colors.orange,
         'keys': [
           'banquetBookingEnabled',
           'banquetReportsEnabled',
@@ -262,7 +493,9 @@ class _CreateUserFormState extends State<CreateUserForm> {
         ],
       },
       {
-        'title': 'Task Management', // NEW: Group for Tasks
+        'title': 'Task Management',
+        'icon': Icons.assignment,
+        'color': Colors.green,
         'keys': [
           'canViewOwnTasks',
           'canSubmitTasks',
@@ -274,6 +507,8 @@ class _CreateUserFormState extends State<CreateUserForm> {
       },
       {
         'title': 'Admin',
+        'icon': Icons.admin_panel_settings,
+        'color': Colors.purple,
         'keys': [
           'userManagementEnabled',
           'menuManagementEnabled',
@@ -287,88 +522,263 @@ class _CreateUserFormState extends State<CreateUserForm> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          TextFormField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: 'Email'),
-              validator: (v) => v!.isEmpty ? 'Please enter an email' : null),
-          TextFormField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Password'),
-              validator: (v) => v!.length < 6
-                  ? 'Password must be at least 6 characters'
-                  : null),
-          const SizedBox(height: 16),
-
-          // FIX: Show a loading indicator if branches are loading, otherwise show the dropdown
-          if (isLoadingBranches)
-            const Center(
-                child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20.0),
-                    child: CircularProgressIndicator()))
-          else
-            DropdownButtonFormField<String>(
-              value: _selectedBranchId,
-              hint: const Text('Select Branch'),
-              decoration: const InputDecoration(border: OutlineInputBorder()),
-              items: branchItems,
-              onChanged: (value) => setState(() => _selectedBranchId = value),
-              validator: (value) =>
-                  value == null ? 'Please select a branch' : null,
-            ),
-
-          const SizedBox(height: 20),
-          const Text('User Roles & Permissions',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          // --- NEW: Grouped switches for permissions ---
-          ...permissionGroups.expand((group) => [
-                Padding(
-                  padding: const EdgeInsets.only(top: 16, bottom: 4),
-                  child: Text(group['title'],
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+          // User Information Card
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
                 ),
-                ...group['keys'].map<Widget>((key) => SwitchListTile(
-                      title: Text(key
-                          .replaceAll('Enabled', '')
-                          .replaceAllMapped(RegExp(r'([a-z])([A-Z])'),
-                              (m) => '${m[1]} ${m[2]}')
-                          .replaceAll('adminDisplay', 'Admin Display')
-                          .replaceAll('banquetSetup', 'Banquet Setup')
-                          .replaceAll('userManagement', 'User Management')
-                          .replaceAll('menuManagement', 'Menu Management')
-                          .replaceAll('branchManagement', 'Branch Management')
-                          .replaceAll('banquetBooking', 'Banquet Booking')
-                          .replaceAll('banquetReports', 'Banquet Reports')
-                          .replaceAll('queueReports', 'Queue Reports')
-                          .replaceAll('podium', 'Podium')
-                          .replaceAll('waiter', 'Waiter')
-                          .replaceAll('customer', 'Customer')
-                          // NEW: Task-related permission display names
-                          .replaceAll('canViewOwnTasks',
-                              'Can be Assigned Tasks (My Tasks)')
-                          .replaceAll('canSubmitTasks', 'Can Submit Tasks')
-                          .replaceAll(
-                              'canViewStaffTasks', 'Can View Staff Tasks')
-                          .replaceAll('canCreateTasks', 'Can Create Tasks')
-                          .replaceAll(
-                              'canEditAssignedTasks', 'Can Edit Assigned Tasks')
-                          .replaceAll(
-                              'canReassignTasks', 'Can Reassign Tasks')),
-                      value: _roles[key]!,
-                      onChanged: (v) => setState(() => _roles[key] = v),
-                    )),
-              ]),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.person_add,
+                        color: Colors.red.shade400, size: 24),
+                    const SizedBox(width: 12),
+                    Text(
+                      'User Information',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    labelText: 'Email Address',
+                    prefixIcon: const Icon(Icons.email),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          BorderSide(color: Colors.red.shade400, width: 2),
+                    ),
+                  ),
+                  validator: (v) => v!.isEmpty ? 'Please enter an email' : null,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    prefixIcon: const Icon(Icons.lock),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          BorderSide(color: Colors.red.shade400, width: 2),
+                    ),
+                  ),
+                  validator: (v) => v!.length < 6
+                      ? 'Password must be at least 6 characters'
+                      : null,
+                ),
+                const SizedBox(height: 16),
+                if (isLoadingBranches)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20.0),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                else
+                  DropdownButtonFormField<String>(
+                    value: _selectedBranchId,
+                    hint: const Text('Select Branch'),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.business),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            BorderSide(color: Colors.red.shade400, width: 2),
+                      ),
+                    ),
+                    items: branchItems,
+                    onChanged: (value) =>
+                        setState(() => _selectedBranchId = value),
+                    validator: (value) =>
+                        value == null ? 'Please select a branch' : null,
+                  ),
+              ],
+            ),
+          ),
           const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _isLoading ? null : _createUser,
-            child: _isLoading
-                ? const CircularProgressIndicator()
-                : const Text('Create User'),
+          // Permissions Card
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.security, color: Colors.red.shade400, size: 24),
+                    const SizedBox(width: 12),
+                    Text(
+                      'User Roles & Permissions',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                ...permissionGroups
+                    .map((group) => _buildPermissionGroup(group)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Create Button
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _createUser,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade400,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 2,
+              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      'Create User',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildPermissionGroup(Map<String, dynamic> group) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: group['color'].withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: group['color'].withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                group['icon'],
+                color: group['color'],
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                group['title'],
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: group['color'],
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...group['keys'].map<Widget>((key) => Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: SwitchListTile(
+                  title: Text(
+                    _getPermissionDisplayName(key),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  value: _roles[key]!,
+                  onChanged: (v) => setState(() => _roles[key] = v),
+                  activeColor: group['color'],
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+
+  String _getPermissionDisplayName(String key) {
+    return key
+        .replaceAll('Enabled', '')
+        .replaceAllMapped(RegExp(r'([a-z])([A-Z])'), (m) => '${m[1]} ${m[2]}')
+        .replaceAll('adminDisplay', 'Admin Display')
+        .replaceAll('banquetSetup', 'Banquet Setup')
+        .replaceAll('userManagement', 'User Management')
+        .replaceAll('menuManagement', 'Menu Management')
+        .replaceAll('branchManagement', 'Branch Management')
+        .replaceAll('banquetBooking', 'Banquet Booking')
+        .replaceAll('banquetReports', 'Banquet Reports')
+        .replaceAll('queueReports', 'Queue Reports')
+        .replaceAll('podium', 'Podium')
+        .replaceAll('waiter', 'Waiter')
+        .replaceAll('customer', 'Customer')
+        .replaceAll('canViewOwnTasks', 'Can be Assigned Tasks (My Tasks)')
+        .replaceAll('canSubmitTasks', 'Can Submit Tasks')
+        .replaceAll('canViewStaffTasks', 'Can View Staff Tasks')
+        .replaceAll('canCreateTasks', 'Can Create Tasks')
+        .replaceAll('canEditAssignedTasks', 'Can Edit Assigned Tasks')
+        .replaceAll('canReassignTasks', 'Can Reassign Tasks');
   }
 }
 
@@ -405,7 +815,6 @@ class _EditUserScreenState extends State<EditUserScreen> {
       'userManagementEnabled': widget.user.userManagementEnabled,
       'menuManagementEnabled': widget.user.menuManagementEnabled,
       'branchManagementEnabled': widget.user.branchManagementEnabled,
-      // NEW: Initialize task-related permissions from existing user
       'canViewOwnTasks': widget.user.canViewOwnTasks,
       'canSubmitTasks': widget.user.canSubmitTasks,
       'canViewStaffTasks': widget.user.canViewStaffTasks,
@@ -434,7 +843,6 @@ class _EditUserScreenState extends State<EditUserScreen> {
       userManagementEnabled: _roles['userManagementEnabled']!,
       menuManagementEnabled: _roles['menuManagementEnabled']!,
       branchManagementEnabled: _roles['branchManagementEnabled']!,
-      // NEW: Update task-related permissions
       canSubmitTasks: _roles['canSubmitTasks']!,
       canViewStaffTasks: _roles['canViewStaffTasks']!,
       canCreateTasks: _roles['canCreateTasks']!,
@@ -465,6 +873,9 @@ class _EditUserScreenState extends State<EditUserScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
         title: const Text('Delete User?'),
         content: Text(
             'Are you sure you want to delete ${widget.user.email}? This action cannot be undone.'),
@@ -501,7 +912,6 @@ class _EditUserScreenState extends State<EditUserScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // FIX: Watch the provider to get branches AND the loading state
     final userProvider = context.watch<UserProvider>();
     final branches = userProvider.branches;
     final isLoadingBranches = userProvider.isLoadingBranches;
@@ -513,21 +923,24 @@ class _EditUserScreenState extends State<EditUserScreen> {
           DropdownMenuItem(value: branch.id, child: Text(branch.name))),
     ];
 
-    // --- NEW: Group permissions for better UI ---
     final List<Map<String, dynamic>> permissionGroups = [
       {
         'title': 'Queue & Podium',
+        'icon': Icons.queue,
+        'color': Colors.blue,
         'keys': [
           'podiumEnabled',
           'waiterEnabled',
           'customerEnabled',
           'queueReportsEnabled',
           'adminDisplayEnabled',
-          'todaysViewEnabled', // NEW: Today's View permission
+          'todaysViewEnabled',
         ],
       },
       {
         'title': 'Banquet',
+        'icon': Icons.event,
+        'color': Colors.orange,
         'keys': [
           'banquetBookingEnabled',
           'banquetReportsEnabled',
@@ -536,7 +949,9 @@ class _EditUserScreenState extends State<EditUserScreen> {
         ],
       },
       {
-        'title': 'Task Management', // NEW: Group for Tasks
+        'title': 'Task Management',
+        'icon': Icons.assignment,
+        'color': Colors.green,
         'keys': [
           'canViewOwnTasks',
           'canSubmitTasks',
@@ -548,6 +963,8 @@ class _EditUserScreenState extends State<EditUserScreen> {
       },
       {
         'title': 'Admin',
+        'icon': Icons.admin_panel_settings,
+        'color': Colors.purple,
         'keys': [
           'userManagementEnabled',
           'menuManagementEnabled',
@@ -557,89 +974,277 @@ class _EditUserScreenState extends State<EditUserScreen> {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: Text('Edit ${widget.user.username}')),
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: [
-          const Text('Assign to Branch',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-
-          // FIX: Show a loading indicator if branches are loading, otherwise show the dropdown
-          if (isLoadingBranches)
-            const Center(
-                child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20.0),
-                    child: CircularProgressIndicator()))
-          else
-            DropdownButtonFormField<String>(
-              value: _selectedBranchId,
-              items: branchItems,
-              onChanged: (value) {
-                if (value != null) setState(() => _selectedBranchId = value);
-              },
-              decoration: const InputDecoration(border: OutlineInputBorder()),
-            ),
-
-          const SizedBox(height: 24),
-          const Text('Permissions',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          // --- NEW: Grouped switches for permissions ---
-          ...permissionGroups.expand((group) => [
-                Padding(
-                  padding: const EdgeInsets.only(top: 16, bottom: 4),
-                  child: Text(group['title'],
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                ),
-                ...group['keys'].map<Widget>((key) => SwitchListTile(
-                      title: Text(key
-                          .replaceAll('Enabled', '')
-                          .replaceAllMapped(RegExp(r'([a-z])([A-Z])'),
-                              (m) => '${m[1]} ${m[2]}')
-                          .replaceAll('adminDisplay', 'Admin Display')
-                          .replaceAll('banquetSetup', 'Banquet Setup')
-                          .replaceAll('userManagement', 'User Management')
-                          .replaceAll('menuManagement', 'Menu Management')
-                          .replaceAll('branchManagement', 'Branch Management')
-                          .replaceAll('banquetBooking', 'Banquet Booking')
-                          .replaceAll('banquetReports', 'Banquet Reports')
-                          .replaceAll('queueReports', 'Queue Reports')
-                          .replaceAll('podium', 'Podium')
-                          .replaceAll('waiter', 'Waiter')
-                          .replaceAll('customer', 'Customer')
-                          // NEW: Task-related permission display names
-                          .replaceAll('canViewOwnTasks',
-                              'Can be Assigned Tasks (My Tasks)')
-                          .replaceAll('canSubmitTasks', 'Can Submit Tasks')
-                          .replaceAll(
-                              'canViewStaffTasks', 'Can View Staff Tasks')
-                          .replaceAll('canCreateTasks', 'Can Create Tasks')
-                          .replaceAll(
-                              'canEditAssignedTasks', 'Can Edit Assigned Tasks')
-                          .replaceAll(
-                              'canReassignTasks', 'Can Reassign Tasks')),
-                      value: _roles[key]!,
-                      onChanged: (v) => setState(() => _roles[key] = v),
-                    )),
-              ]),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _isLoading ? null : _updateUser,
-            child: _isLoading
-                ? const CircularProgressIndicator()
-                : const Text('Save Changes'),
+      backgroundColor: Colors.grey.shade50,
+      appBar: AppBar(
+        title: Text(
+          'Edit ${widget.user.username.isEmpty ? widget.user.email : widget.user.username}',
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
           ),
-          const Divider(height: 40, color: Colors.grey),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.delete_forever),
-            label: const Text('Delete User'),
-            onPressed: _isLoading ? null : _deleteUser,
-            style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade700,
-                foregroundColor: Colors.white),
-          )
+        ),
+        backgroundColor: Colors.red.shade400,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.red.shade50,
+              Colors.white,
+            ],
+          ),
+        ),
+        child: ListView(
+          padding: const EdgeInsets.all(16.0),
+          children: [
+            // Branch Assignment Card
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.business,
+                          color: Colors.red.shade400, size: 24),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Branch Assignment',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (isLoadingBranches)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20.0),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  else
+                    DropdownButtonFormField<String>(
+                      value: _selectedBranchId,
+                      items: branchItems,
+                      onChanged: (value) {
+                        if (value != null)
+                          setState(() => _selectedBranchId = value);
+                      },
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.business),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide:
+                              BorderSide(color: Colors.red.shade400, width: 2),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Permissions Card
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.security,
+                          color: Colors.red.shade400, size: 24),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Permissions',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  ...permissionGroups
+                      .map((group) => _buildPermissionGroup(group)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Save Button
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _updateUser,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade400,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 2,
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text(
+                        'Save Changes',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Delete Button
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.delete_forever),
+                label: const Text(
+                  'Delete User',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onPressed: _isLoading ? null : _deleteUser,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade700,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 2,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPermissionGroup(Map<String, dynamic> group) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: group['color'].withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: group['color'].withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                group['icon'],
+                color: group['color'],
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                group['title'],
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: group['color'],
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...group['keys'].map<Widget>((key) => Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: SwitchListTile(
+                  title: Text(
+                    _getPermissionDisplayName(key),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  value: _roles[key]!,
+                  onChanged: (v) => setState(() => _roles[key] = v),
+                  activeColor: group['color'],
+                ),
+              )),
         ],
       ),
     );
+  }
+
+  String _getPermissionDisplayName(String key) {
+    return key
+        .replaceAll('Enabled', '')
+        .replaceAllMapped(RegExp(r'([a-z])([A-Z])'), (m) => '${m[1]} ${m[2]}')
+        .replaceAll('adminDisplay', 'Admin Display')
+        .replaceAll('banquetSetup', 'Banquet Setup')
+        .replaceAll('userManagement', 'User Management')
+        .replaceAll('menuManagement', 'Menu Management')
+        .replaceAll('branchManagement', 'Branch Management')
+        .replaceAll('banquetBooking', 'Banquet Booking')
+        .replaceAll('banquetReports', 'Banquet Reports')
+        .replaceAll('queueReports', 'Queue Reports')
+        .replaceAll('podium', 'Podium')
+        .replaceAll('waiter', 'Waiter')
+        .replaceAll('customer', 'Customer')
+        .replaceAll('canViewOwnTasks', 'Can be Assigned Tasks (My Tasks)')
+        .replaceAll('canSubmitTasks', 'Can Submit Tasks')
+        .replaceAll('canViewStaffTasks', 'Can View Staff Tasks')
+        .replaceAll('canCreateTasks', 'Can Create Tasks')
+        .replaceAll('canEditAssignedTasks', 'Can Edit Assigned Tasks')
+        .replaceAll('canReassignTasks', 'Can Reassign Tasks');
   }
 }

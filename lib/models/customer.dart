@@ -9,6 +9,7 @@ class Customer {
   int pax;
   DateTime registeredAt;
   DateTime? calledAt;
+  DateTime? seatedAt; // NEW: When customer was actually seated
   int children;
   String? operator;
   String? waiterName;
@@ -26,6 +27,7 @@ class Customer {
     required this.pax,
     required this.registeredAt,
     this.calledAt,
+    this.seatedAt, // NEW: Added to constructor
     this.children = 0,
     this.operator,
     this.waiterName,
@@ -42,6 +44,7 @@ class Customer {
       'pax': pax,
       'registeredAt': registeredAt,
       'calledAt': calledAt,
+      'seatedAt': seatedAt, // NEW: Save seatedAt to Firestore
       'children': children,
       'operator': operator,
       'waiterName': waiterName,
@@ -60,6 +63,9 @@ class Customer {
       registeredAt: (map['registeredAt'] as Timestamp).toDate(),
       calledAt: map['calledAt'] != null
           ? (map['calledAt'] as Timestamp).toDate()
+          : null,
+      seatedAt: map['seatedAt'] != null // NEW: Read seatedAt from Firestore
+          ? (map['seatedAt'] as Timestamp).toDate()
           : null,
       children: map['children'] ?? 0,
       operator: map['operator'],

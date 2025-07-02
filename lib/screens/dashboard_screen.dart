@@ -166,13 +166,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                   _buildGreetingSection(user),
                   SizedBox(height: 24),
 
-                  // Statistics Cards
-                  _buildStatisticsSection(),
-                  SizedBox(height: 24),
+                  // Statistics Cards - Only visible to super admin (branchId: 'all')
+                  if (user.branchId == 'all') ...[
+                    _buildStatisticsSection(),
+                    SizedBox(height: 24),
+                  ],
 
-                  // Quick Actions
-                  _buildQuickActionsSection(user),
-                  SizedBox(height: 24),
+                  // Quick Actions - Only visible to super admin (branchId: 'all')
+                  if (user.branchId == 'all') ...[
+                    _buildQuickActionsSection(user),
+                    SizedBox(height: 24),
+                  ],
 
                   // Module Cards
                   _buildModuleCardsSection(user),

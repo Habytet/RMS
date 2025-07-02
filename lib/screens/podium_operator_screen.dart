@@ -4,6 +4,8 @@ import 'dart:async';
 import 'package:flutter/material.dart'; // FIX: Corrected the import path
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher_string.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart'; // Add for haptic feedback
 
 import '../models/customer.dart';
 import '../models/branch.dart';
@@ -28,6 +30,7 @@ class _PodiumOperatorScreenState extends State<PodiumOperatorScreen>
 
   // --- Admin branch selection state ---
   String? _selectedBranchId;
+  bool _isSeatingCustomer = false; // Add loading state for seating action
 
   @override
   void initState() {
@@ -853,20 +856,66 @@ class _PodiumOperatorScreenState extends State<PodiumOperatorScreen>
                                   return Dismissible(
                                     key: ValueKey(c.token),
                                     direction: DismissDirection.horizontal,
-                                    onDismissed: (_) {
-                                      final waiterName = context
-                                              .read<UserProvider>()
-                                              .currentUser
-                                              ?.username ??
-                                          'Unknown';
-                                      context
-                                          .read<TokenProvider>()
-                                          .seatCustomer(c, waiterName);
+                                    onDismissed: (direction) async {
+                                      if (direction ==
+                                          DismissDirection.startToEnd) {
+                                        // Swipe right - seat customer
+                                        HapticFeedback.lightImpact();
+
+                                        setState(() {
+                                          _isSeatingCustomer = true;
+                                        });
+
+                                        try {
+                                          final waiterName = context
+                                                  .read<UserProvider>()
+                                                  .currentUser
+                                                  ?.username ??
+                                              'Unknown';
+                                          context
+                                              .read<TokenProvider>()
+                                              .seatCustomer(c, waiterName);
+
+                                          // Show success feedback
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                    '${c.name} has been seated successfully'),
+                                                backgroundColor: Colors.green,
+                                                duration:
+                                                    const Duration(seconds: 2),
+                                              ),
+                                            );
+                                          }
+                                        } catch (e) {
+                                          // Show error feedback
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                    'Failed to seat customer: $e'),
+                                                backgroundColor: Colors.red,
+                                                duration:
+                                                    const Duration(seconds: 3),
+                                              ),
+                                            );
+                                          }
+                                        } finally {
+                                          if (mounted) {
+                                            setState(() {
+                                              _isSeatingCustomer = false;
+                                            });
+                                          }
+                                        }
+                                      }
                                     },
                                     background: Container(
                                       margin: const EdgeInsets.only(bottom: 12),
                                       decoration: BoxDecoration(
-                                        color: Colors.blue.shade400,
+                                        color: Colors.green.shade500,
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       alignment: Alignment.centerLeft,
@@ -874,14 +923,15 @@ class _PodiumOperatorScreenState extends State<PodiumOperatorScreen>
                                           horizontal: 20),
                                       child: Row(
                                         children: [
-                                          Icon(Icons.login,
-                                              color: Colors.white),
-                                          const SizedBox(width: 8),
+                                          Icon(Icons.check_circle,
+                                              color: Colors.white, size: 24),
+                                          const SizedBox(width: 12),
                                           Text(
                                             'Seat Customer',
                                             style: TextStyle(
                                               color: Colors.white,
                                               fontWeight: FontWeight.w600,
+                                              fontSize: 16,
                                             ),
                                           ),
                                         ],
@@ -920,7 +970,8 @@ class _PodiumOperatorScreenState extends State<PodiumOperatorScreen>
                                         await _showTableSelectionDialog(c);
                                         return false; // Don't dismiss the card
                                       }
-                                      return true; // Allow swipe right to seat customer
+                                      // Swipe right - allow dismissal and seat customer
+                                      return true;
                                     },
                                     child: Container(
                                       margin: const EdgeInsets.only(bottom: 12),
@@ -1047,36 +1098,95 @@ class _PodiumOperatorScreenState extends State<PodiumOperatorScreen>
                                                       ),
                                                     ),
                                                   ),
+                                                if (_isSeatingCustomer)
+                                                  Container(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 4),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.blue
+                                                          .withOpacity(0.2),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              12),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        SizedBox(
+                                                          width: 12,
+                                                          height: 12,
+                                                          child:
+                                                              CircularProgressIndicator(
+                                                            strokeWidth: 2,
+                                                            valueColor:
+                                                                AlwaysStoppedAnimation<
+                                                                    Color>(
+                                                              Colors.blue
+                                                                  .shade600,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 4),
+                                                        Text(
+                                                          'Seating...',
+                                                          style: TextStyle(
+                                                            color: Colors
+                                                                .blue.shade600,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            fontSize: 10,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
                                               ],
                                             ),
                                             const SizedBox(height: 12),
                                             Row(
                                               children: [
-                                                _buildInfoChip(
-                                                  '${c.pax} Adults',
-                                                  Icons.person,
-                                                  isLate
-                                                      ? Colors.white
-                                                          .withOpacity(0.2)
-                                                      : Colors.blue.shade100,
-                                                  isLate
-                                                      ? Colors.white
-                                                      : Colors.blue.shade600,
+                                                Expanded(
+                                                  child: Row(
+                                                    children: [
+                                                      _buildInfoChip(
+                                                        '${c.pax} Adults',
+                                                        Icons.person,
+                                                        isLate
+                                                            ? Colors.white
+                                                                .withOpacity(
+                                                                    0.2)
+                                                            : Colors
+                                                                .blue.shade100,
+                                                        isLate
+                                                            ? Colors.white
+                                                            : Colors
+                                                                .blue.shade600,
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      _buildInfoChip(
+                                                        '${c.children} Kids',
+                                                        Icons.child_care,
+                                                        isLate
+                                                            ? Colors.white
+                                                                .withOpacity(
+                                                                    0.2)
+                                                            : Colors.orange
+                                                                .shade100,
+                                                        isLate
+                                                            ? Colors.white
+                                                            : Colors.orange
+                                                                .shade600,
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
-                                                const SizedBox(width: 8),
-                                                _buildInfoChip(
-                                                  '${c.children} Kids',
-                                                  Icons.child_care,
-                                                  isLate
-                                                      ? Colors.white
-                                                          .withOpacity(0.2)
-                                                      : Colors.orange.shade100,
-                                                  isLate
-                                                      ? Colors.white
-                                                      : Colors.orange.shade600,
-                                                ),
-                                                const Spacer(),
                                                 Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
                                                   children: [
                                                     Container(
                                                       decoration: BoxDecoration(

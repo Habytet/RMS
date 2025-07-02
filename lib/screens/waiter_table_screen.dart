@@ -104,8 +104,8 @@ class _WaiterTableScreenState extends State<WaiterTableScreen> {
               child: DropdownButton<String>(
                 value: _selectedBranchId,
                 dropdownColor: Colors.white,
-                style:
-                    TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                    color: Colors.black87, fontWeight: FontWeight.w500),
                 underline: SizedBox(),
                 items: [
                   DropdownMenuItem(
@@ -113,9 +113,10 @@ class _WaiterTableScreenState extends State<WaiterTableScreen> {
                     child: Row(
                       children: [
                         Icon(Icons.all_inclusive,
-                            color: Colors.white, size: 18),
+                            color: Colors.red.shade700, size: 18),
                         SizedBox(width: 8),
-                        Text('All Branches'),
+                        Text('All Branches',
+                            style: TextStyle(color: Colors.black87)),
                       ],
                     ),
                   ),
@@ -126,9 +127,10 @@ class _WaiterTableScreenState extends State<WaiterTableScreen> {
                             child: Row(
                               children: [
                                 Icon(Icons.business,
-                                    color: Colors.white, size: 18),
+                                    color: Colors.red.shade700, size: 18),
                                 SizedBox(width: 8),
-                                Text(branch.name),
+                                Text(branch.name,
+                                    style: TextStyle(color: Colors.black87)),
                               ],
                             ),
                           )),

@@ -14,6 +14,20 @@ class AdminDisplayScreen extends StatefulWidget {
 
 class _AdminDisplayScreenState extends State<AdminDisplayScreen> {
   String _selectedBranchFilter = 'all';
+  bool _hasTimedOut = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Add a timeout to prevent infinite loading
+    Future.delayed(const Duration(seconds: 8), () {
+      if (mounted) {
+        setState(() {
+          _hasTimedOut = true;
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,9 +39,23 @@ class _AdminDisplayScreenState extends State<AdminDisplayScreen> {
     final List<Customer> queue = tokenProvider.queue;
     final bool isLoading = tokenProvider.isLoading;
 
+    // Debug print to understand the state
+    print(
+        'Admin Display - isLoading: $isLoading, queue length: ${queue.length}, hasTimedOut: $_hasTimedOut');
+    print('Selected branch filter: $_selectedBranchFilter');
+
+    // Debug: Print all customers and their branch names
+    for (final customer in queue) {
+      print('Customer: ${customer.name}, Branch: ${customer.branchName}');
+    }
+
     final List<Customer> filteredQueue = _selectedBranchFilter == 'all'
         ? queue
         : queue.where((c) => c.branchName == _selectedBranchFilter).toList();
+
+    print('Filtered queue length: ${filteredQueue.length}');
+    print(
+        'All unique branch names in queue: ${queue.map((c) => c.branchName).toSet()}');
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -193,7 +221,7 @@ class _AdminDisplayScreenState extends State<AdminDisplayScreen> {
 
           // Queue List Section
           Expanded(
-            child: isLoading
+            child: isLoading && !_hasTimedOut
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -210,10 +238,18 @@ class _AdminDisplayScreenState extends State<AdminDisplayScreen> {
                             fontSize: 16,
                           ),
                         ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'This may take a few seconds',
+                          style: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
                   )
-                : filteredQueue.isEmpty
+                : queue.isEmpty && !isLoading
                     ? Center(
                         child: Container(
                           margin: const EdgeInsets.all(32),
@@ -258,153 +294,201 @@ class _AdminDisplayScreenState extends State<AdminDisplayScreen> {
                           ),
                         ),
                       )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: filteredQueue.length,
-                        itemBuilder: (context, index) {
-                          final customer = filteredQueue[index];
-
-                          final String branchId = customer.branchName ?? '';
-                          final branchName = allBranches
-                              .firstWhere((branch) => branch.id == branchId,
-                                  orElse: () => Branch(id: '', name: 'Unknown'))
-                              .name;
-
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(20),
+                    : filteredQueue.isEmpty && !isLoading
+                        ? Center(
+                            child: Container(
+                              margin: const EdgeInsets.all(32),
+                              padding: const EdgeInsets.all(32),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(10),
-                                        decoration: BoxDecoration(
-                                          color: Colors.blue.shade100,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        child: Icon(
-                                          Icons.person,
-                                          color: Colors.blue.shade600,
-                                          size: 24,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              customer.name,
-                                              style: TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.grey.shade800,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'Token: ${customer.token}',
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                color: Colors.grey.shade600,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.green.shade100,
-                                          borderRadius:
-                                              BorderRadius.circular(20),
-                                        ),
-                                        child: Text(
-                                          branchName,
-                                          style: TextStyle(
-                                            color: Colors.green.shade700,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                  Icon(
+                                    Icons.filter_list,
+                                    size: 64,
+                                    color: Colors.grey.shade400,
                                   ),
                                   const SizedBox(height: 16),
-                                  Row(
-                                    children: [
-                                      _buildInfoChip(
-                                        '${customer.pax} Adults',
-                                        Icons.person,
-                                        Colors.blue.shade100,
-                                        Colors.blue.shade600,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      _buildInfoChip(
-                                        '${customer.children} Kids',
-                                        Icons.child_care,
-                                        Colors.orange.shade100,
-                                        Colors.orange.shade600,
-                                      ),
-                                      const Spacer(),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey.shade100,
-                                          borderRadius:
-                                              BorderRadius.circular(20),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.phone,
-                                              size: 16,
-                                              color: Colors.grey.shade600,
-                                            ),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              customer.phone,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey.shade600,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
+                                  Text(
+                                    'No customers in selected branch',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Try selecting a different branch or check back later',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                    textAlign: TextAlign.center,
                                   ),
                                 ],
                               ),
                             ),
-                          );
-                        },
-                      ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: filteredQueue.length,
+                            itemBuilder: (context, index) {
+                              final customer = filteredQueue[index];
+
+                              final String branchId = customer.branchName ?? '';
+                              final branchName = allBranches
+                                  .firstWhere((branch) => branch.id == branchId,
+                                      orElse: () =>
+                                          Branch(id: '', name: 'Unknown'))
+                                  .name;
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: Colors.blue.shade100,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Icon(
+                                              Icons.person,
+                                              color: Colors.blue.shade600,
+                                              size: 24,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  customer.name,
+                                                  style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.grey.shade800,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  'Token: ${customer.token}',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey.shade600,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 6,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.green.shade100,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            child: Text(
+                                              branchName,
+                                              style: TextStyle(
+                                                color: Colors.green.shade700,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Row(
+                                        children: [
+                                          _buildInfoChip(
+                                            '${customer.pax} Adults',
+                                            Icons.person,
+                                            Colors.blue.shade100,
+                                            Colors.blue.shade600,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          _buildInfoChip(
+                                            '${customer.children} Kids',
+                                            Icons.child_care,
+                                            Colors.orange.shade100,
+                                            Colors.orange.shade600,
+                                          ),
+                                          const Spacer(),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 6,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey.shade100,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  Icons.phone,
+                                                  size: 16,
+                                                  color: Colors.grey.shade600,
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  customer.phone,
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey.shade600,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
           ),
         ],
       ),

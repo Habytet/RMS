@@ -143,20 +143,21 @@ class _TodaysViewScreenState extends State<TodaysViewScreen> {
               child: DropdownButton<String>(
                 value: _selectedBranchId,
                 dropdownColor: Colors.white,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: Colors.black87,
                   fontWeight: FontWeight.w500,
                 ),
                 underline: const SizedBox(),
                 items: [
-                  const DropdownMenuItem(
+                  DropdownMenuItem(
                     value: 'all',
                     child: Row(
                       children: [
                         Icon(Icons.all_inclusive,
-                            color: Colors.white, size: 18),
+                            color: Colors.red.shade700, size: 18),
                         SizedBox(width: 8),
-                        Text('All Branches'),
+                        Text('All Branches',
+                            style: TextStyle(color: Colors.black87)),
                       ],
                     ),
                   ),
@@ -167,9 +168,10 @@ class _TodaysViewScreenState extends State<TodaysViewScreen> {
                             child: Row(
                               children: [
                                 Icon(Icons.business,
-                                    color: Colors.white, size: 18),
-                                const SizedBox(width: 8),
-                                Text(branch.name),
+                                    color: Colors.red.shade700, size: 18),
+                                SizedBox(width: 8),
+                                Text(branch.name,
+                                    style: TextStyle(color: Colors.black87)),
                               ],
                             ),
                           )),

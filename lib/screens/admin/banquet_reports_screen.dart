@@ -147,7 +147,7 @@ class _BanquetReportsScreenState extends State<BanquetReportsScreen> {
     final picked = await showDateRangePicker(
       context: context,
       firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
       initialDateRange: _range,
       builder: (context, child) {
         return Theme(
@@ -241,11 +241,16 @@ class _BanquetReportsScreenState extends State<BanquetReportsScreen> {
             .cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: row))
             .value = TextCellValue(booking.phone);
         sheet
-            .cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: row))
-            .value = TextCellValue(booking.hallName);
+                .cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: row))
+                .value =
+            TextCellValue(
+                booking.hallSlots.map((hs) => hs['hallName'] ?? '').join(', '));
         sheet
-            .cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: row))
-            .value = TextCellValue(booking.slotLabel);
+                .cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: row))
+                .value =
+            TextCellValue(booking.hallSlots
+                .map((hs) => hs['slotLabel'] ?? '')
+                .join(', '));
         sheet
             .cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: row))
             .value = IntCellValue(booking.pax);
@@ -439,7 +444,7 @@ class _BanquetReportsScreenState extends State<BanquetReportsScreen> {
                       Expanded(
                         child: _buildStatCard(
                           'Revenue',
-                          '\$${totalRevenue.toStringAsFixed(0)}',
+                          '${totalRevenue.toStringAsFixed(0)}',
                           Icons.attach_money,
                           Colors.purple.shade100,
                           Colors.purple.shade600,
@@ -591,11 +596,15 @@ class _BanquetReportsScreenState extends State<BanquetReportsScreen> {
                                       DataCell(Text(_fmt.format(booking.date))),
                                       DataCell(Text(booking.customerName)),
                                       DataCell(Text(booking.phone)),
-                                      DataCell(Text(booking.hallName)),
-                                      DataCell(Text(booking.slotLabel)),
+                                      DataCell(Text(booking.hallSlots
+                                          .map((hs) => hs['hallName'] ?? '')
+                                          .join(', '))),
+                                      DataCell(Text(booking.hallSlots
+                                          .map((hs) => hs['slotLabel'] ?? '')
+                                          .join(', '))),
                                       DataCell(Text(booking.pax.toString())),
                                       DataCell(Text(
-                                          '\$${booking.totalAmount.toStringAsFixed(0)}')),
+                                          '${booking.totalAmount.toStringAsFixed(0)}')),
                                       DataCell(
                                         Container(
                                           padding: const EdgeInsets.symmetric(

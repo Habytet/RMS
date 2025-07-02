@@ -48,6 +48,15 @@ class TokenProvider extends ChangeNotifier {
     _settingsSubscription?.cancel();
     _adminSettingsSubscription?.cancel();
 
+    // Add a timeout to prevent infinite loading
+    Future.delayed(const Duration(seconds: 10), () {
+      if (_isLoading) {
+        print('Loading timeout reached, setting isLoading to false');
+        _isLoading = false;
+        notifyListeners();
+      }
+    });
+
     if (branchId == 'all') {
       _queueQuery = _firestore.collectionGroup('queue').orderBy('token');
       _completedCol = null;
@@ -102,15 +111,22 @@ class TokenProvider extends ChangeNotifier {
 
       // Also listen to the selected branch's queue for real-time updates
       final queueQuery = branchRef.collection('queue').orderBy('token');
-      _queueSubscription = queueQuery.snapshots().listen((snapshot) {
-        _queue = snapshot.docs.map((doc) {
-          final customer = Customer.fromMap(doc.data());
-          customer.branchName = branchId; // Set the branch name for filtering
-          return customer;
-        }).toList();
-        _isLoading = false;
-        notifyListeners();
-      });
+      _queueSubscription = queueQuery.snapshots().listen(
+        (snapshot) {
+          _queue = snapshot.docs.map((doc) {
+            final customer = Customer.fromMap(doc.data());
+            customer.branchName = branchId; // Set the branch name for filtering
+            return customer;
+          }).toList();
+          _isLoading = false;
+          notifyListeners();
+        },
+        onError: (error) {
+          print('Error listening to admin branch queue: $error');
+          _isLoading = false;
+          notifyListeners();
+        },
+      );
     } else {
       _resetLocalStateForAdmin();
       // Reset to collection group query for 'all' view
@@ -120,24 +136,61 @@ class TokenProvider extends ChangeNotifier {
   }
 
   void _listenToQueue() {
-    _queueSubscription = _queueQuery.snapshots().listen((snapshot) {
-      _queue =
-          snapshot.docs.map((doc) => Customer.fromMap(doc.data())).toList();
-      _isLoading = false;
-      notifyListeners();
-    });
+    _queueSubscription = _queueQuery.snapshots().listen(
+      (snapshot) {
+        _queue =
+            snapshot.docs.map((doc) => Customer.fromMap(doc.data())).toList();
+        _isLoading = false;
+        notifyListeners();
+      },
+      onError: (error) {
+        print('Error listening to queue: $error');
+        _isLoading = false;
+        notifyListeners();
+      },
+    );
   }
 
   void _listenToQueueCollectionGroup() {
-    _queueSubscription = _queueQuery.snapshots().listen((snapshot) {
-      _queue = snapshot.docs.map((doc) {
-        final customer = Customer.fromMap(doc.data());
-        customer.branchName = doc.reference.parent.parent?.id ?? 'Unknown';
-        return customer;
-      }).toList();
-      _isLoading = false;
-      notifyListeners();
-    });
+    _queueSubscription = _queueQuery.snapshots().listen(
+      (snapshot) {
+        print(
+            'Collection group snapshot received with ${snapshot.docs.length} documents');
+        _queue = snapshot.docs.map((doc) {
+          final customer = Customer.fromMap(doc.data());
+
+          // Extract branch ID from the document path
+          // Path format: branches/{branchId}/queue/{token}
+          final pathParts = doc.reference.path.split('/');
+          String branchId = 'Unknown';
+
+          if (pathParts.length >= 3 && pathParts[0] == 'branches') {
+            branchId = pathParts[1];
+          } else {
+            // Fallback to the old method
+            branchId = doc.reference.parent.parent?.id ?? 'Unknown';
+          }
+
+          customer.branchName = branchId;
+          print(
+              'Customer ${customer.name} from branch: $branchId (path: ${doc.reference.path})');
+          return customer;
+        }).toList();
+
+        // Debug: Print all unique branch names
+        final uniqueBranches = _queue.map((c) => c.branchName).toSet();
+        print('Unique branches found: $uniqueBranches');
+        print('Total customers: ${_queue.length}');
+
+        _isLoading = false;
+        notifyListeners();
+      },
+      onError: (error) {
+        print('Error listening to queue collection group: $error');
+        _isLoading = false;
+        notifyListeners();
+      },
+    );
   }
 
   void _listenToSettings() {
@@ -261,6 +314,7 @@ class TokenProvider extends ChangeNotifier {
     if (effectiveBranchId == 'all' || effectiveBranchId.isEmpty) {
       throw Exception("Cannot seat customer in 'All Branches' view.");
     }
+
     _queue.removeWhere((c) => c.token == customer.token);
     notifyListeners();
     _moveCustomerToCompleted(customer, waiterName, effectiveBranchId);
@@ -269,6 +323,15 @@ class TokenProvider extends ChangeNotifier {
   Future<void> _moveCustomerToCompleted(
       Customer customer, String waiterName, String branchId) async {
     customer.waiterName = waiterName;
+    customer.seatedAt = DateTime.now(); // Set the actual seating time
+
+    print('DEBUG: Moving customer to completed:');
+    print('  token: ${customer.token}');
+    print('  name: ${customer.name}');
+    print('  registeredAt: ${customer.registeredAt}');
+    print('  seatedAt: ${customer.seatedAt}');
+    print('  branchId: $branchId');
+
     final branchRef = _firestore.collection('branches').doc(branchId);
     final completedCol = branchRef.collection('completed');
     await completedCol.add(customer.toMap());
